@@ -11,6 +11,46 @@
     autoremove: true
   tags: upgrade
 
+- name: Check which uv is installed
+  ansible.builtin.command: uv --version
+  register: base_uv_installed
+  changed_when: false
+  failed_when: false
+
+# A pinned release verified by checksum, rather than piping Astral's installer into a shell.
+- name: Install uv
+  when: base_uv_version not in base_uv_installed.stdout
+  vars:
+    base_uv_archive: uv-{{ 'aarch64' if ansible_facts.architecture == 'aarch64' else 'x86_64' }}-unknown-linux-gnu.tar.gz
+    base_uv_url: https://github.com/astral-sh/uv/releases/download/{{ base_uv_version }}/{{ base_uv_archive }}
+  block:
+    - name: Download the uv release
+      ansible.builtin.get_url:
+        url: "{{ base_uv_url }}"
+        dest: /tmp/{{ base_uv_archive }}
+        checksum: sha256:{{ base_uv_url }}.sha256
+        mode: "0644"
+        timeout: 60
+      register: base_uv_download
+      until: base_uv_download is succeeded
+      retries: 3
+      delay: 5
+
+    # --no-same-owner: the archive carries Astral's build uid/gid, and root must own
+    # binaries in /usr/local/bin. unarchive's own owner/mode can't be used here
+    # because it looks for the pre-strip paths and fails.
+    - name: Unpack uv and uvx into /usr/local/bin
+      ansible.builtin.unarchive:
+        src: /tmp/{{ base_uv_archive }}
+        dest: /usr/local/bin
+        remote_src: true
+        extra_opts: [--strip-components=1, --no-same-owner]
+
+    - name: Remove the uv download
+      ansible.builtin.file:
+        path: /tmp/{{ base_uv_archive }}
+        state: absent
+
 - name: Enable unattended security upgrades
   ansible.builtin.copy:
     dest: /etc/apt/apt.conf.d/20auto-upgrades

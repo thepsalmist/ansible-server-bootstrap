@@ -8,11 +8,14 @@ Docker Engine and Dokku. Safe to re-run; every run converges.
 ## Setup (on your workstation)
 
 ```bash
-pipx install ansible-core          # 2.15+, tested with 2.21
+uv tool install ansible-core       # 2.15+, tested with 2.21
 ansible-galaxy collection install -r requirements.yml
 cp inventory.ini.example inventory.ini              # server address
 cp group_vars/all.yml.example group_vars/all.yml    # admin_user, admin_ssh_keys
 ```
+
+If `ansible-playbook` isn't found afterwards, run `uv tool update-shell` and
+open a new shell.
 
 ## Usage
 
@@ -43,7 +46,7 @@ Keep a root session or the provider's console open during the first run.
 | `tasks/preflight.yml` | Refuses unsupported OSes and bad `admin_*` settings |
 | `roles/admin_user` | Admin account, SSH keys, passwordless sudo |
 | `roles/ssh_hardening` | sshd drop-in, checked against the effective config, rolled back on failure |
-| `roles/base` | Packages, apt upgrade, unattended-upgrades, timezone, optional swap |
+| `roles/base` | Packages, uv, apt upgrade, unattended-upgrades, timezone, optional swap |
 | `roles/firewall` | ufw (SSH + 80/443, deny the rest) and fail2ban |
 | `roles/docker` | Docker Engine from Docker's apt repository |
 | `roles/dokku` | Dokku from its apt repository, deploy keys, global domain |
