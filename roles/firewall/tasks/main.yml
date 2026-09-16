@@ -26,14 +26,38 @@
     direction: incoming
     policy: deny
 
-- name: Install fail2ban
-  ansible.builtin.apt:
-    name: fail2ban
+- name: Set up fail2ban
   when: firewall_fail2ban
+  block:
+    - name: Find the address Ansible connects from
+      ansible.builtin.shell: echo "$SSH_CONNECTION"
+      become: false
+      changed_when: false
+      register: firewall_ssh_connection
 
-- name: Start fail2ban
-  ansible.builtin.service:
-    name: fail2ban
-    state: started
-    enabled: true
-  when: firewall_fail2ban
+    - name: Create the fail2ban jail directory
+      ansible.builtin.file:
+        path: /etc/fail2ban/jail.d
+        state: directory
+        mode: "0755"
+
+    # Written before the package is installed: apt starts fail2ban on install and it
+    # scans the existing auth.log, which can ban the address you deploy from.
+    - name: Exempt the deploy address from fail2ban
+      ansible.builtin.template:
+        src: ignoreip.local.j2
+        dest: /etc/fail2ban/jail.d/00-ignoreip.local
+        mode: "0644"
+      vars:
+        firewall_deploy_address: "{{ firewall_ssh_connection.stdout.split()[0:1] }}"
+      notify: Restart fail2ban
+
+    - name: Install fail2ban
+      ansible.builtin.apt:
+        name: fail2ban
+
+    - name: Start fail2ban
+      ansible.builtin.service:
+        name: fail2ban
+        state: started
+        enabled: true

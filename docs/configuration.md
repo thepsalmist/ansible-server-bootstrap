@@ -17,6 +17,7 @@ there too.
 | `base_swap_size_mb` | `0` | Creates `/swapfile` of this size if the host has no swap. `0` skips it |
 | `firewall_allowed_tcp_ports` | `[80, 443]` | TCP ports opened besides SSH. SSH is always allowed |
 | `firewall_fail2ban` | `true` | Install and run fail2ban (default sshd jail) |
+| `firewall_fail2ban_ignoreip` | `[]` | Extra addresses fail2ban never bans. Loopback and the address you deploy from are always included |
 | `dokku_version` | `0.38.27` | Dokku apt package version. See [dokku.md](dokku.md) before bumping |
 | `dokku_global_domain` | `""` | Global app domain, for example `apps.example.com`. Empty skips it |
 

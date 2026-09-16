@@ -1,3 +1,4 @@
 ---
 firewall_allowed_tcp_ports: [80, 443]
 firewall_fail2ban: true
+firewall_fail2ban_ignoreip: []

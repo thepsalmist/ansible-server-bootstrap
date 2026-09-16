@@ -15,10 +15,34 @@
 
 ## Deploying an app
 
+Create the app first — every method below needs it to exist:
+
+```bash
+dokku apps:create myapp
+```
+
+Then populate its repository from a prebuilt image, an archive, or a remote
+git repository:
+
+```bash
+dokku git:from-image myapp registry.example.com/myapp:v1 "Your Name" you@example.com
+dokku git:from-archive myapp https://example.com/myapp.tar.gz "Your Name" you@example.com
+dokku git:sync --build myapp https://github.com/you/myapp.git main
+```
+
+Check <https://dokku.com/docs/deployment/methods/git/> for when each of
+these builds and deploys on its own and when you have to trigger it, for
+example with `dokku ps:rebuild myapp`.
+
+Pushing to the server also works, if you'd rather:
+
 ```bash
 git remote add dokku dokku@SERVER:myapp
 git push dokku main
 ```
+
+The keys the role registers cover both: they authorise git pushes and
+running the CLI remotely, as in `ssh dokku@SERVER apps:list`.
 
 ## Domains and TLS
 
