@@ -51,6 +51,12 @@ Re-runs converge, and bumping `dokku_version` upgrades. Docker is
 installed first so Dokku's package uses `docker-ce` rather than pulling in
 Ubuntu's `docker.io`.
 
+**Dokku plugins are pinned to release tags.** `plugin:install` without a
+tag clones whatever the plugin's default branch holds that day, so two
+servers built a week apart could differ. The role installs the tag in
+`dokku_plugins` and runs `plugin:update` when the installed version
+differs, so bumping a tag upgrades the plugin.
+
 **uv comes from a pinned release, not `curl | sh`.** Ubuntu 22.04/24.04
 package no uv, and Astral's installer is a piped shell script. The base role
 downloads the `base_uv_version` release, verifies it against the checksum

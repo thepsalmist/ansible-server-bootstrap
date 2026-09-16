@@ -20,6 +20,7 @@ there too.
 | `firewall_fail2ban_ignoreip` | `[]` | Extra addresses fail2ban never bans. Loopback and the address you deploy from are always included |
 | `dokku_version` | `0.38.27` | Dokku apt package version. See [dokku.md](dokku.md) before bumping |
 | `dokku_global_domain` | `""` | Global app domain, for example `apps.example.com`. Empty skips it |
+| `dokku_plugins` | postgres, redis, letsencrypt | Dokku plugins, each pinned to a release tag. See [dokku.md](dokku.md#plugins) |
 
 `ssh_hardening_options` defaults to:
 

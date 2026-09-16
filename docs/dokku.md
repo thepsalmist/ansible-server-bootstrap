@@ -12,6 +12,8 @@
 3. Registers each `admin_ssh_keys` entry as `<admin_user>-<hash>` and
    skips keys Dokku already has.
 4. Sets `dokku_global_domain`, if you gave one.
+5. Installs each `dokku_plugins` entry at its pinned release tag, and runs
+   `plugin:update` when the installed version doesn't match the tag.
 
 ## Deploying an app
 
@@ -51,13 +53,50 @@ and `*.apps.example.com` at the server, then run
 `ansible-playbook site.yml --tags dokku`. Apps are served at
 `myapp.apps.example.com`.
 
-TLS is per app, once DNS resolves and the app is deployed:
+The role installs the letsencrypt plugin. TLS is per app, once DNS
+resolves and the app is deployed:
 
 ```bash
-sudo dokku plugin:install https://github.com/dokku/dokku-letsencrypt.git
 sudo dokku letsencrypt:set --global email you@example.com
 sudo dokku letsencrypt:cron-job --add
 sudo dokku letsencrypt:enable myapp
+```
+
+## Plugins
+
+The role installs Dokku's postgres, redis and letsencrypt plugins. To add
+or drop one, set the whole list in `group_vars/all.yml`. Official plugins
+are listed at <https://dokku.com/docs/community/plugins/>.
+
+```yaml
+dokku_plugins:
+  - name: postgres
+    url: https://github.com/dokku/dokku-postgres.git
+    version: "1.48.0"
+  - name: mysql
+    url: https://github.com/dokku/dokku-mysql.git
+    version: "<release tag>"
+```
+
+`version` must be a release tag. The role compares it with the version
+`dokku plugin:list` reports, which Dokku's own plugins keep equal to the
+tag. A branch or commit would never match, so every run would update the
+plugin again.
+
+If an install or update fails part-way, for example on a Docker Hub pull
+limit, the plugin already reports its pinned version and later runs skip
+it. Once the cause is fixed, run `sudo dokku plugin:install` with no
+arguments to finish setting up every installed plugin.
+
+Removing a plugin from the list doesn't uninstall it. Delete its services,
+then run `sudo dokku plugin:uninstall <name>`.
+
+The role only installs plugins. Each app creates and links its own
+services:
+
+```bash
+dokku postgres:create myapp-db
+dokku postgres:link myapp-db myapp     # sets DATABASE_URL on myapp
 ```
 
 ## Upgrading
@@ -73,6 +112,13 @@ sudo apt-get --no-install-recommends install dokku herokuish sshcommand plugn gl
 sudo dokku ps:rebuild --all
 ```
 
+To upgrade a plugin, bump its `version` and run `--tags dokku`. Existing
+services keep the image version they were created with until you run, for
+example, `dokku postgres:upgrade myapp-db`. Check the new tag's
+`Dockerfile` first. Postgres doesn't migrate data across major versions,
+so if the major version changed, use the export and import described in
+the plugin's README instead.
+
 unattended-upgrades only applies Ubuntu security updates, so Docker and
 Dokku change only when you upgrade them.
 
@@ -85,6 +131,11 @@ because nginx on 80/443 proxies to containers on internal addresses. For
 anything else, don't publish database ports, bind to loopback when you
 need to (`-p 127.0.0.1:5432:5432`), and use the provider's firewall as a
 second layer.
+
+`postgres:expose` and `redis:expose` publish ports the same way. Expose
+on loopback only (`dokku postgres:expose myapp-db 127.0.0.1:5432`) and
+reach it through an SSH tunnel
+(`ssh -L 5432:127.0.0.1:5432 <admin_user>@SERVER`).
 
 ## Out of scope
 
