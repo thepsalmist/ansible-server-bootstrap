@@ -53,3 +53,32 @@
     argv: [dokku, "domains:set-global", "{{ dokku_global_domain }}"]
   when: dokku_global_domain | length > 0 and dokku_global_domain not in dokku_global_domains.stdout.split()
   changed_when: true
+
+- name: Read the installed Dokku plugins
+  ansible.builtin.command: dokku plugin:list --format json
+  register: dokku_plugin_list
+  changed_when: false
+  check_mode: false
+
+- name: Pin Dokku plugins
+  vars:
+    dokku_installed_plugins: "{{ dokku_plugin_list.stdout | from_json | items2dict(key_name='name', value_name='version') }}"
+  block:
+    - name: Install missing Dokku plugins
+      ansible.builtin.command:
+        argv: [dokku, "plugin:install", "{{ item.url }}", --committish, "{{ item.version }}", --name, "{{ item.name }}"]
+      loop: "{{ dokku_plugins }}"
+      loop_control:
+        label: "{{ item.name }} {{ item.version }}"
+      when: item.name not in dokku_installed_plugins
+      changed_when: true
+
+    # plugin:list reports plugin.toml's version, which Dokku's own plugins bump to match each release tag.
+    - name: Move Dokku plugins to their pinned version
+      ansible.builtin.command:
+        argv: [dokku, "plugin:update", "{{ item.name }}", "{{ item.version }}"]
+      loop: "{{ dokku_plugins }}"
+      loop_control:
+        label: "{{ item.name }} {{ item.version }}"
+      when: item.name in dokku_installed_plugins and dokku_installed_plugins[item.name] != item.version
+      changed_when: true

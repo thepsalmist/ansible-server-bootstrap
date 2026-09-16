@@ -1,3 +1,13 @@
 ---
 dokku_version: "0.38.27"
 dokku_global_domain: ""
+dokku_plugins:
+  - name: postgres
+    url: https://github.com/dokku/dokku-postgres.git
+    version: "1.48.0"
+  - name: redis
+    url: https://github.com/dokku/dokku-redis.git
+    version: "1.43.0"
+  - name: letsencrypt
+    url: https://github.com/dokku/dokku-letsencrypt.git
+    version: "0.25.2"

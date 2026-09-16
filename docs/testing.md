@@ -27,5 +27,6 @@ systemctl is-active docker fail2ban
 docker run --rm hello-world
 sudo dokku version
 sudo dokku ssh-keys:list
+sudo dokku plugin:list
 cat /etc/apt/apt.conf.d/20auto-upgrades
 ```
