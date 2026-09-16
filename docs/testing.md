@@ -21,6 +21,7 @@ upgrade when new packages have been published.
 ```bash
 sudo sshd -T | grep -E '^(permitrootlogin|passwordauthentication|kbdinteractiveauthentication) '
 sudo ufw status verbose
+uv --version
 systemctl is-active docker fail2ban
 docker run --rm hello-world
 sudo dokku version

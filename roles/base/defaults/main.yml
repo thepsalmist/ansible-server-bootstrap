@@ -4,10 +4,10 @@ base_packages:
   - ca-certificates
   - curl
   - git
-  - pipx
   - python3-dev
   - python3-pip
   - python3-venv
   - unattended-upgrades
+base_uv_version: "0.12.15"
 base_timezone: Etc/UTC
 base_swap_size_mb: 0

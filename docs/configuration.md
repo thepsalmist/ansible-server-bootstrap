@@ -11,7 +11,8 @@ there too.
 | `admin_ssh_keys` | required | List of public keys for the admin. Also registered with Dokku |
 | `bootstrap_user` | `root` | Account `bootstrap.yml` first connects as. Pass with `-e` |
 | `ssh_hardening_options` | see below | sshd directives written to the drop-in and verified |
-| `base_packages` | build-essential, ca-certificates, curl, git, pipx, python3-dev, python3-pip, python3-venv, unattended-upgrades | Packages installed on every host |
+| `base_packages` | build-essential, ca-certificates, curl, git, python3-dev, python3-pip, python3-venv, unattended-upgrades | Packages installed on every host |
+| `base_uv_version` | `0.12.15` | uv release installed to `/usr/local/bin`. Bump it to upgrade |
 | `base_timezone` | `Etc/UTC` | IANA timezone, for example `Africa/Nairobi` |
 | `base_swap_size_mb` | `0` | Creates `/swapfile` of this size if the host has no swap. `0` skips it |
 | `firewall_allowed_tcp_ports` | `[80, 443]` | TCP ports opened besides SSH. SSH is always allowed |

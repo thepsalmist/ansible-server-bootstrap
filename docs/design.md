@@ -51,6 +51,13 @@ Re-runs converge, and bumping `dokku_version` upgrades. Docker is
 installed first so Dokku's package uses `docker-ce` rather than pulling in
 Ubuntu's `docker.io`.
 
+**uv comes from a pinned release, not `curl | sh`.** Ubuntu 22.04/24.04
+package no uv, and Astral's installer is a piped shell script. The base role
+downloads the `base_uv_version` release, verifies it against the checksum
+published beside it, and unpacks `uv` and `uvx` into `/usr/local/bin`.
+Bumping the variable upgrades it. Ubuntu's `python3`, `python3-venv` and
+`python3-pip` stay for anything that expects the system interpreter.
+
 **The admin is in the `docker` group.** That's root-equivalent, but so is
 passwordless sudo. It adds convenience, not risk. Remove that task in
 `roles/docker` if you want every Docker call to go through sudo and its
