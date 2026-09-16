@@ -1,0 +1,3 @@
+# {{ ansible_managed }}
+[DEFAULT]
+ignoreip = {{ (['127.0.0.1/8', '::1'] + firewall_deploy_address + firewall_fail2ban_ignoreip) | unique | join(' ') }}

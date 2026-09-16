@@ -57,6 +57,25 @@ ssh -o PubkeyAuthentication=no deploy@SERVER      # should fail: no password pro
 sudo sshd -T | grep -E '^(permitrootlogin|passwordauthentication|kbdinteractiveauthentication) '
 ```
 
+## fail2ban
+
+The firewall role writes `/etc/fail2ban/jail.d/00-ignoreip.local` with
+loopback, the address Ansible connects from, and anything in
+`firewall_fail2ban_ignoreip`, *before* installing the package. That order
+matters: apt starts fail2ban on install and it scans the existing
+`auth.log`, so a few earlier failed logins from your own address are enough
+for it to ban you mid-run. A ban also drops established connections,
+because fail2ban's rule sits above ufw's rule that accepts them.
+
+A ban looks like `Connection refused` (fail2ban rejects, where ufw would
+silently drop). Default bans last 10 minutes. To clear one from the
+provider's console:
+
+```bash
+fail2ban-client set sshd unbanip YOUR_ADDRESS
+fail2ban-client status sshd
+```
+
 ## Adding options
 
 Add entries to `ssh_hardening_options`. The same assertion checks them.
