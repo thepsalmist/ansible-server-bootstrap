@@ -1,0 +1,4 @@
+# Copy to inventory.ini (gitignored). Don't set ansible_user here: each
+# playbook chooses its SSH user (see docs/design.md).
+[servers]
+myserver ansible_host=203.0.113.10

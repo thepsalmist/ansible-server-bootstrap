@@ -1,0 +1,39 @@
+---
+- name: Install ufw
+  ansible.builtin.apt:
+    name: ufw
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Read the effective sshd config
+  ansible.builtin.command: /usr/sbin/sshd -T
+  register: firewall_sshd_config
+  changed_when: false
+
+# SSH ports come from sshd itself, not ansible_port, so NAT or a bastion can't cause a lockout.
+- name: Allow SSH and the configured TCP ports
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ firewall_sshd_ports + firewall_allowed_tcp_ports }}"
+  vars:
+    firewall_sshd_ports: "{{ firewall_sshd_config.stdout_lines | select('match', '^port ') | map('split') | map('last') | list }}"
+
+- name: Enable ufw and deny all other incoming traffic
+  community.general.ufw:
+    state: enabled
+    direction: incoming
+    policy: deny
+
+- name: Install fail2ban
+  ansible.builtin.apt:
+    name: fail2ban
+  when: firewall_fail2ban
+
+- name: Start fail2ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: started
+    enabled: true
+  when: firewall_fail2ban

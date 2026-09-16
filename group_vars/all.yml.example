@@ -1,0 +1,13 @@
+---
+# Copy to group_vars/all.yml (gitignored). Everything not set here uses the
+# role defaults listed in docs/configuration.md.
+
+admin_user: deploy
+
+# Public keys only. Authorised for admin_user and registered with Dokku.
+admin_ssh_keys:
+  - "{{ lookup('ansible.builtin.file', '~/.ssh/id_ed25519.pub') }}"
+
+base_timezone: Etc/UTC
+# base_swap_size_mb: 2048
+# dokku_global_domain: apps.example.com

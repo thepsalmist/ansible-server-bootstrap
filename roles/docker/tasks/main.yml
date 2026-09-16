@@ -1,0 +1,49 @@
+---
+- name: Remove conflicting distro Docker packages
+  ansible.builtin.apt:
+    name:
+      - docker.io
+      - docker-compose
+      - docker-compose-v2
+      - docker-doc
+      - docker-buildx
+      - podman-docker
+      - containerd
+      - runc
+    state: absent
+
+- name: Install the deb822_repository prerequisite
+  ansible.builtin.apt:
+    name: python3-debian
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Add Docker's apt repository
+  ansible.builtin.deb822_repository:
+    name: docker
+    uris: https://download.docker.com/linux/ubuntu
+    suites: "{{ ansible_facts.distribution_release }}"
+    components: stable
+    signed_by: https://download.docker.com/linux/ubuntu/gpg
+
+- name: Install Docker Engine
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    update_cache: true
+
+- name: Start Docker
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Let the admin user run docker without sudo
+  ansible.builtin.user:
+    name: "{{ admin_user }}"
+    groups: docker
+    append: true

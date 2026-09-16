@@ -1,0 +1,57 @@
+---
+- name: Harden sshd, rolling back if the change doesn't take effect
+  block:
+    # 00- sorts before cloud-init's 50- drop-in; sshd keeps the first value it reads.
+    - name: Install the sshd hardening drop-in
+      ansible.builtin.template:
+        src: 00-hardening.conf.j2
+        dest: /etc/ssh/sshd_config.d/00-hardening.conf
+        mode: "0644"
+        validate: /usr/sbin/sshd -t -f %s
+      register: ssh_hardening_dropin
+
+    - name: Read the effective sshd config for a root login
+      ansible.builtin.command: /usr/sbin/sshd -T -C user=root,host=localhost,addr=127.0.0.1
+      register: ssh_hardening_effective
+      changed_when: false
+
+    - name: Check each hardening option is in effect
+      ansible.builtin.assert:
+        that: (item.key ~ ' ' ~ item.value) | lower in ssh_hardening_effective.stdout_lines
+        fail_msg: "{{ item.key }} is overridden elsewhere in the sshd config"
+        quiet: true
+      loop: "{{ ssh_hardening_options | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+
+    # Not a handler: sshd must reload before the fresh-login check below.
+    - name: Reload sshd  # noqa: no-handler
+      ansible.builtin.service:
+        name: ssh
+        state: reloaded
+      when: ssh_hardening_dropin is changed
+
+    - name: Drop the current SSH connection
+      ansible.builtin.meta: reset_connection
+
+    - name: Confirm a fresh SSH login still works
+      ansible.builtin.wait_for_connection:
+        timeout: 30
+
+  rescue:
+    # Only undo a drop-in this run wrote; one from an earlier run stays in place.
+    - name: Remove the hardening drop-in  # noqa: no-handler
+      ansible.builtin.file:
+        path: /etc/ssh/sshd_config.d/00-hardening.conf
+        state: absent
+      when: ssh_hardening_dropin is changed
+
+    - name: Reload sshd with the previous config  # noqa: no-handler
+      ansible.builtin.service:
+        name: ssh
+        state: reloaded
+      when: ssh_hardening_dropin is changed
+
+    - name: Stop after rolling back
+      ansible.builtin.fail:
+        msg: SSH hardening failed and was rolled back. See docs/ssh-hardening.md.

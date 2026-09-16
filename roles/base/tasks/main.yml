@@ -1,0 +1,66 @@
+---
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ base_packages }}"
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Upgrade installed packages
+  ansible.builtin.apt:
+    upgrade: safe
+    autoremove: true
+  tags: upgrade
+
+- name: Enable unattended security upgrades
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    mode: "0644"
+
+- name: Set the timezone
+  community.general.timezone:
+    name: "{{ base_timezone }}"
+
+- name: Create a swap file
+  when:
+    - base_swap_size_mb | int > 0
+    - ansible_facts.swaptotal_mb == 0
+  block:
+    - name: Allocate the swap file
+      ansible.builtin.command: fallocate -l {{ base_swap_size_mb }}M /swapfile
+      args:
+        creates: /swapfile
+
+    - name: Restrict swap file permissions
+      ansible.builtin.file:
+        path: /swapfile
+        mode: "0600"
+
+    - name: Format the swap file
+      community.general.filesystem:
+        dev: /swapfile
+        fstype: swap
+
+    - name: Enable the swap file
+      ansible.builtin.command: swapon /swapfile
+      changed_when: true
+
+    - name: Enable the swap file at boot
+      ansible.posix.mount:
+        src: /swapfile
+        path: none
+        fstype: swap
+        opts: sw
+        state: present
+
+- name: Check whether a reboot is required
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: base_reboot_required
+
+- name: Warn that a reboot is required
+  ansible.builtin.debug:
+    msg: Package updates on {{ inventory_hostname }} need a reboot. Reboot in a quiet window.
+  when: base_reboot_required.stat.exists

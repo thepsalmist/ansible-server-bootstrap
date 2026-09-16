@@ -1,0 +1,6 @@
+inventory.ini
+group_vars/all.yml
+*.retry
+*.log
+.omc/
+.venv/

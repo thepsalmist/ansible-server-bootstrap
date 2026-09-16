@@ -1,0 +1,20 @@
+---
+- name: Check the target is a supported Ubuntu release
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution == 'Ubuntu'
+      - ansible_facts.distribution_version in ['22.04', '24.04']
+      - ansible_facts.architecture in ['x86_64', 'aarch64']
+    fail_msg: Supported targets are Ubuntu 22.04/24.04 on x86_64 or aarch64 (the releases Dokku supports).
+    quiet: true
+
+- name: Check the admin user settings
+  ansible.builtin.assert:
+    that:
+      - admin_user is match('^[a-z][a-z0-9_-]{0,31}$')
+      - admin_user not in ['root', 'dokku', 'ubuntu']
+      - admin_ssh_keys is sequence and admin_ssh_keys is not string
+      - admin_ssh_keys | length > 0
+      - admin_ssh_keys | reject('match', '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp[0-9]+|sk-[^ ]+) [^ ]+') | list | length == 0
+    fail_msg: Set admin_user and admin_ssh_keys (a list of public keys) in group_vars/all.yml.
+    quiet: true

@@ -1,0 +1,7 @@
+---
+# Quote values: an unquoted `no` is a YAML boolean and sshd rejects "False".
+ssh_hardening_options:
+  PermitRootLogin: "no"
+  PasswordAuthentication: "no"
+  KbdInteractiveAuthentication: "no"
+  X11Forwarding: "no"

@@ -1,0 +1,4 @@
+# {{ ansible_managed }}
+{% for option, value in ssh_hardening_options.items() %}
+{{ option }} {{ value }}
+{% endfor %}

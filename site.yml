@@ -1,0 +1,17 @@
+---
+- name: Configure the server
+  hosts: all
+  become: true
+  vars:
+    ansible_user: "{{ admin_user }}"
+  pre_tasks:
+    - name: Run preflight checks
+      ansible.builtin.import_tasks: tasks/preflight.yml
+      tags: always
+  roles:
+    - { role: admin_user, tags: admin_user }
+    - { role: ssh_hardening, tags: ssh_hardening }
+    - { role: base, tags: base }
+    - { role: firewall, tags: firewall }
+    - { role: docker, tags: docker }
+    - { role: dokku, tags: dokku }

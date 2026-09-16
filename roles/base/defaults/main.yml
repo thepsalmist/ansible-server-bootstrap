@@ -1,0 +1,13 @@
+---
+base_packages:
+  - build-essential
+  - ca-certificates
+  - curl
+  - git
+  - pipx
+  - python3-dev
+  - python3-pip
+  - python3-venv
+  - unattended-upgrades
+base_timezone: Etc/UTC
+base_swap_size_mb: 0

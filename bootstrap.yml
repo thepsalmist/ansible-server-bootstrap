@@ -1,0 +1,14 @@
+---
+- name: Create the admin user through the provider's initial login
+  hosts: all
+  become: true
+  vars:
+    ansible_user: "{{ bootstrap_user | default('root') }}"
+  pre_tasks:
+    - name: Run preflight checks
+      ansible.builtin.import_tasks: tasks/preflight.yml
+  roles:
+    - admin_user
+
+- name: Configure the server as the admin user
+  ansible.builtin.import_playbook: site.yml
