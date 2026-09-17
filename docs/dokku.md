@@ -14,6 +14,8 @@
 4. Sets `dokku_global_domain`, if you gave one.
 5. Installs each `dokku_plugins` entry at its pinned release tag, and runs
    `plugin:update` when the installed version doesn't match the tag.
+6. If letsencrypt is in `dokku_plugins`, sets `dokku_letsencrypt_email` as
+   its global email, if you gave one, and adds its daily renewal cron job.
 
 ## Deploying an app
 
@@ -53,13 +55,13 @@ and `*.apps.example.com` at the server, then run
 `ansible-playbook site.yml --tags dokku`. Apps are served at
 `myapp.apps.example.com`.
 
-The role installs the letsencrypt plugin. TLS is per app, once DNS
-resolves and the app is deployed:
+The role installs the letsencrypt plugin and its renewal cron job. Set
+`dokku_letsencrypt_email: you@example.com` too, or the plugin refuses to
+request certificates. TLS is per app, once DNS resolves and the app is
+deployed:
 
 ```bash
-sudo dokku letsencrypt:set --global email you@example.com
-sudo dokku letsencrypt:cron-job --add
-sudo dokku letsencrypt:enable myapp
+dokku letsencrypt:enable myapp
 ```
 
 ## Plugins

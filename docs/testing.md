@@ -28,5 +28,7 @@ docker run --rm hello-world
 sudo dokku version
 sudo dokku ssh-keys:list
 sudo dokku plugin:list
+sudo dokku letsencrypt:report --global
+sudo dokku letsencrypt:cron-job
 cat /etc/apt/apt.conf.d/20auto-upgrades
 ```
