@@ -11,3 +11,4 @@ admin_ssh_keys:
 base_timezone: Etc/UTC
 # base_swap_size_mb: 2048
 # dokku_global_domain: apps.example.com
+# dokku_letsencrypt_email: you@example.com

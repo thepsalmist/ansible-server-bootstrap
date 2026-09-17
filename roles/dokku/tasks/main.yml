@@ -82,3 +82,29 @@
         label: "{{ item.name }} {{ item.version }}"
       when: item.name in dokku_installed_plugins and dokku_installed_plugins[item.name] != item.version
       changed_when: true
+
+- name: Configure Let's Encrypt
+  when: "'letsencrypt' in dokku_plugins | map(attribute='name')"
+  block:
+    - name: Read Let's Encrypt's global settings
+      ansible.builtin.command: dokku letsencrypt:report --global --format json
+      register: dokku_letsencrypt_report
+      changed_when: false
+      check_mode: false
+
+    - name: Set Let's Encrypt's global email
+      ansible.builtin.command:
+        argv: [dokku, "letsencrypt:set", --global, email, "{{ dokku_letsencrypt_email }}"]
+      when: dokku_letsencrypt_email | length > 0 and dokku_letsencrypt_email != (dokku_letsencrypt_report.stdout | from_json)['global-email']
+      changed_when: true
+
+    - name: Read Let's Encrypt's renewal cron job status
+      ansible.builtin.command: dokku letsencrypt:cron-job
+      register: dokku_letsencrypt_cron_job
+      changed_when: false
+      check_mode: false
+
+    - name: Add Let's Encrypt's renewal cron job
+      ansible.builtin.command: dokku letsencrypt:cron-job --add
+      when: "'cron job is enabled' not in dokku_letsencrypt_cron_job.stdout"
+      changed_when: true

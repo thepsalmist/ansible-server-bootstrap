@@ -1,6 +1,7 @@
 ---
 dokku_version: "0.38.27"
 dokku_global_domain: ""
+dokku_letsencrypt_email: ""
 dokku_plugins:
   - name: postgres
     url: https://github.com/dokku/dokku-postgres.git
