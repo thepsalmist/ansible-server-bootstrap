@@ -30,14 +30,14 @@
   },
   "panels": [
     {
-      "type": "stat",
+      "type": "gauge",
       "title": "CPU busy",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 4,
         "x": 0,
         "y": 0
@@ -82,17 +82,27 @@
           "max": 100
         },
         "overrides": []
+      },
+      "options": {
+        "showThresholdMarkers": true,
+        "showThresholdLabels": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
       }
     },
     {
-      "type": "stat",
+      "type": "gauge",
       "title": "Memory used",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 4,
         "x": 4,
         "y": 0
@@ -137,17 +147,27 @@
           "max": 100
         },
         "overrides": []
+      },
+      "options": {
+        "showThresholdMarkers": true,
+        "showThresholdLabels": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
       }
     },
     {
-      "type": "stat",
+      "type": "gauge",
       "title": "Root disk used",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 4,
         "x": 8,
         "y": 0
@@ -192,6 +212,16 @@
           "max": 100
         },
         "overrides": []
+      },
+      "options": {
+        "showThresholdMarkers": true,
+        "showThresholdLabels": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
       }
     },
     {
@@ -202,7 +232,7 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 4,
         "x": 12,
         "y": 0
@@ -255,7 +285,7 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 4,
         "x": 16,
         "y": 0
@@ -308,7 +338,7 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 4,
         "x": 20,
         "y": 0
@@ -356,7 +386,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 4
+        "y": 5
       },
       "targets": [
         {
@@ -396,7 +426,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 4
+        "y": 5
       },
       "targets": [
         {
@@ -452,7 +482,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 12
+        "y": 13
       },
       "targets": [
         {
@@ -487,7 +517,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 12
+        "y": 13
       },
       "targets": [
         {
@@ -532,7 +562,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 12
+        "y": 13
       },
       "targets": [
         {
@@ -577,7 +607,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 20
+        "y": 21
       },
       "targets": [
         {
@@ -641,7 +671,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 20
+        "y": 21
       },
       "targets": [
         {
