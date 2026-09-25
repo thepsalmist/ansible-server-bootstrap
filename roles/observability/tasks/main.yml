@@ -1,0 +1,133 @@
+---
+- name: Install the Docker API client the network module needs
+  ansible.builtin.apt:
+    name: python3-requests
+
+- name: Create the observability network
+  community.docker.docker_network:
+    name: "{{ observability_network }}"
+    ipam_config:
+      - subnet: "{{ observability_subnet }}"
+        gateway: "{{ observability_gateway }}"
+
+- name: Let the observability network reach node-exporter
+  community.general.ufw:
+    rule: allow
+    from_ip: "{{ observability_subnet }}"
+    to_ip: "{{ observability_gateway }}"
+    port: "9100"
+    proto: tcp
+
+- name: Create the observability config directories
+  ansible.builtin.file:
+    path: "{{ observability_dir }}/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop: [prometheus, loki, alloy, blackbox]
+
+- name: Write the observability configs
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ observability_dir }}/{{ item.dest }}"
+    mode: "0644"
+  loop:
+    - { src: prometheus.yml.j2, dest: prometheus/prometheus.yml, service: prometheus }
+    - { src: loki.yaml.j2, dest: loki/config.yaml, service: loki }
+    - { src: config.alloy.j2, dest: alloy/config.alloy, service: alloy }
+    - { src: blackbox.yml, dest: blackbox/config.yml, service: blackbox }
+  loop_control:
+    label: "{{ item.dest }}"
+  register: observability_configs
+
+- name: Read the Dokku apps
+  ansible.builtin.command: dokku --quiet apps:list
+  register: observability_apps
+  changed_when: false
+  check_mode: false
+
+- name: Read each app's domains
+  ansible.builtin.command:
+    argv: [dokku, "domains:report", "{{ item }}", --domains-app-vhosts]
+  loop: "{{ observability_apps.stdout_lines }}"
+  register: observability_app_domains
+  changed_when: false
+  check_mode: false
+
+- name: Write the health check targets
+  ansible.builtin.copy:
+    content: "{{ observability_probes | to_nice_json }}\n"
+    dest: "{{ observability_dir }}/prometheus/probes.json"
+    mode: "0644"
+  vars:
+    observability_probes: >-
+      {%- set probes = [] -%}
+      {%- for result in observability_app_domains.results -%}
+      {%- for domain in result.stdout.split() -%}
+      {%- set _ = probes.append({'targets': ['https://' ~ domain ~ '/healthz'], 'labels': {'app': result.item}}) -%}
+      {%- endfor -%}
+      {%- endfor -%}
+      {{ probes }}
+
+- name: Read the Docker group ID
+  ansible.builtin.getent:
+    database: group
+    key: docker
+
+- name: Write the Compose file
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ observability_dir }}/compose.yaml"
+    mode: "0644"
+  vars:
+    observability_docker_gid: "{{ ansible_facts.getent_group.docker[1] }}"
+
+- name: Start the observability stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ observability_dir }}"
+    wait: true
+    wait_timeout: 120
+
+- name: Restart services whose config changed
+  community.docker.docker_compose_v2:
+    project_src: "{{ observability_dir }}"
+    services: "{{ observability_changed_services }}"
+    state: restarted
+  vars:
+    observability_changed_services: "{{ observability_configs.results | selectattr('changed') | map(attribute='item.service') | list }}"
+  when: observability_changed_services | length > 0
+
+- name: Define Dokku's JSON access log format
+  ansible.builtin.copy:
+    src: 00-log-formats.conf
+    dest: /etc/nginx/conf.d/00-log-formats.conf
+    mode: "0644"
+  register: observability_log_format
+
+- name: Check the nginx config  # noqa: no-handler
+  ansible.builtin.command: nginx -t
+  when: observability_log_format is changed
+  changed_when: false
+
+- name: Reload nginx  # noqa: no-handler
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded
+  when: observability_log_format is changed
+
+- name: Read Dokku's global access log format
+  ansible.builtin.command: dokku nginx:report --global --nginx-global-access-log-format
+  register: observability_access_log_format
+  changed_when: false
+  check_mode: false
+  failed_when: false
+
+- name: Write app access logs as JSON
+  when: observability_access_log_format.stdout != 'dokku_json'
+  block:
+    - name: Set Dokku's global access log format
+      ansible.builtin.command: dokku nginx:set --global access-log-format dokku_json
+      changed_when: true
+
+    - name: Rebuild every app's nginx config
+      ansible.builtin.command: dokku proxy:build-config --all
+      changed_when: true

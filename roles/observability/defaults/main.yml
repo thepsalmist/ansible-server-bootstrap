@@ -1,0 +1,14 @@
+---
+observability_dir: /opt/observability
+observability_network: observability
+observability_subnet: 172.30.0.0/24
+observability_gateway: 172.30.0.1
+observability_prometheus_retention: 15d
+observability_loki_retention: 720h
+observability_journal_units: [ssh.service, docker.service]
+observability_prometheus_version: v3.15.0
+observability_loki_version: 3.7.8
+observability_alloy_version: v1.19.2
+observability_node_exporter_version: v1.12.1
+observability_cadvisor_version: v0.60.6
+observability_blackbox_version: v0.28.0

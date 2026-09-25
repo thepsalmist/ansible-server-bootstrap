@@ -32,4 +32,6 @@ sudo dokku plugin:list
 sudo dokku letsencrypt:report --global
 sudo dokku letsencrypt:cron-job
 cat /etc/apt/apt.conf.d/20auto-upgrades
+(cd /opt/observability && docker compose ps)
+sudo ufw status | grep 9100
 ```
