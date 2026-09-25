@@ -196,7 +196,7 @@
     },
     {
       "type": "stat",
-      "title": "Root disk full in",
+      "title": "Root disk free",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -214,7 +214,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(node_filesystem_avail_bytes{mountpoint=\"/\"} / -deriv(node_filesystem_avail_bytes{mountpoint=\"/\"}[6h])) > 0",
+          "expr": "node_filesystem_avail_bytes{mountpoint=\"/\"}",
           "legendFormat": "",
           "instant": false,
           "range": true
@@ -222,7 +222,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "bytes",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -232,18 +232,17 @@
               },
               {
                 "color": "orange",
-                "value": 604800
+                "value": 5000000000.0
               },
               {
                 "color": "green",
-                "value": 2592000
+                "value": 20000000000.0
               }
             ]
           },
           "color": {
             "mode": "thresholds"
-          },
-          "noValue": "Not filling"
+          }
         },
         "overrides": []
       }
@@ -587,7 +586,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "topk(8, sum by (name) (rate(container_cpu_usage_seconds_total{name!=\"\"}[$__rate_interval])))",
+          "expr": "sort_desc(topk(8, sum by (name) (label_replace(label_join(rate(container_cpu_usage_seconds_total{name!=\"\"}[$__rate_interval]), \"dokku\", \".\", \"container_label_com_dokku_app_name\", \"container_label_com_dokku_process_type\"), \"name\", \"$1\", \"dokku\", \"(.+[.].+)\"))))",
           "legendFormat": "{{name}}",
           "instant": true,
           "range": false
@@ -651,7 +650,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "topk(8, sum by (name) (container_memory_working_set_bytes{name!=\"\"}))",
+          "expr": "sort_desc(topk(8, sum by (name) (label_replace(label_join(container_memory_working_set_bytes{name!=\"\"}, \"dokku\", \".\", \"container_label_com_dokku_app_name\", \"container_label_com_dokku_process_type\"), \"name\", \"$1\", \"dokku\", \"(.+[.].+)\"))))",
           "legendFormat": "{{name}}",
           "instant": true,
           "range": false

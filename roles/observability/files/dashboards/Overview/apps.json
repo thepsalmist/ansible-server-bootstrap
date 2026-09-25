@@ -283,7 +283,7 @@
     },
     {
       "type": "timeseries",
-      "title": "CPU by container",
+      "title": "CPU by process",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -296,8 +296,8 @@
       },
       "targets": [
         {
-          "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{container_label_com_dokku_app_name=\"$app\"}[$__rate_interval]))",
-          "legendFormat": "{{name}}",
+          "expr": "sum by (container_label_com_dokku_process_type) (rate(container_cpu_usage_seconds_total{container_label_com_dokku_app_name=\"$app\"}[$__rate_interval]))",
+          "legendFormat": "{{container_label_com_dokku_process_type}}",
           "refId": "A",
           "datasource": {
             "type": "prometheus",
@@ -314,7 +314,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Memory by container",
+      "title": "Memory by process",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -327,8 +327,8 @@
       },
       "targets": [
         {
-          "expr": "sum by (name) (container_memory_working_set_bytes{container_label_com_dokku_app_name=\"$app\"})",
-          "legendFormat": "{{name}}",
+          "expr": "sum by (container_label_com_dokku_process_type) (container_memory_working_set_bytes{container_label_com_dokku_app_name=\"$app\"})",
+          "legendFormat": "{{container_label_com_dokku_process_type}}",
           "refId": "A",
           "datasource": {
             "type": "prometheus",
