@@ -77,5 +77,15 @@ that was configured before may still have other ports open. Check
 `/var/run/reboot-required` exists. unattended-upgrades is left at its
 default of not rebooting.
 
+**The observability stack runs in Compose, not as Dokku apps.** The
+collectors need host mounts, the host PID namespace and the Docker socket,
+and nothing in the stack serves the public. Prometheus, Alloy and cAdvisor can
+read the Docker socket, and cAdvisor runs privileged, which makes all three
+root-equivalent; none is reachable from outside the host.
+
+**node-exporter uses host networking.** Inside a container it would report
+the container's network, not the host's. It listens only on the
+observability network's gateway, never a public address.
+
 **Ubuntu 22.04 and 24.04 only.** Those are Dokku's supported releases.
 Preflight refuses anything else.

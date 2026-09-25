@@ -15,3 +15,4 @@
     - { role: firewall, tags: firewall }
     - { role: docker, tags: docker }
     - { role: dokku, tags: dokku }
+    - { role: observability, tags: observability }

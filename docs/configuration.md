@@ -24,6 +24,12 @@ there too.
 | `dokku_global_domain` | `""` | Global app domain, for example `apps.example.com`. Empty skips it |
 | `dokku_letsencrypt_email` | `""` | Email Let's Encrypt certificates are requested with, for every app. Empty skips it |
 | `dokku_plugins` | postgres, redis, letsencrypt | Dokku plugins, each pinned to a release tag. See [dokku.md](dokku.md#plugins) |
+| `observability_subnet` | `172.30.0.0/24` | Subnet of the `observability` Docker network. Pick one no other network uses |
+| `observability_gateway` | `172.30.0.1` | That subnet's gateway, where node-exporter listens |
+| `observability_prometheus_retention` | `15d` | How long Prometheus keeps metrics |
+| `observability_loki_retention` | `720h` | How long Loki keeps logs |
+| `observability_journal_units` | ssh, docker | systemd units whose journal goes to Loki |
+| `observability_*_version` | see `roles/observability/defaults` | Image tag for each service. Bump to upgrade |
 
 `ssh_hardening_options` defaults to:
 
@@ -42,7 +48,8 @@ the names `sshd -T` prints and quote `yes`/`no`.
 
 | Tag | Runs |
 |---|---|
-| `admin_user`, `ssh_hardening`, `base`, `firewall`, `docker`, `dokku` | That role only (preflight always runs) |
+| `admin_user`, `ssh_hardening`, `base`, `firewall`, `docker`, `dokku`, `observability` | That role only (preflight always runs) |
 | `upgrade` | The apt upgrade in `base`. Use `--skip-tags upgrade` to leave packages alone |
 
-`dokku` needs `docker` to have run first on that host.
+`dokku` needs `docker` to have run first on that host, and `observability`
+needs `dokku`.
