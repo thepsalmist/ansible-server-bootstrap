@@ -28,6 +28,39 @@ Nothing is published on the host except node-exporter, which listens on
 the network's gateway address (`observability_gateway:9100`). One ufw rule
 lets the network reach it.
 
+## Grafana
+
+Set `observability_grafana_domain` and `observability_grafana_admin_password`
+in `group_vars/all.yml` and the role deploys Grafana as the Dokku app
+`grafana`:
+
+- `git:from-image grafana/grafana:<observability_grafana_version>`. Bumping
+  the version redeploys it.
+- Data in `/var/lib/dokku/data/storage/grafana`, so users and settings
+  survive rebuilds and upgrades.
+- Datasources (Prometheus as the default, Loki) and dashboards (Dokku apps,
+  Node Exporter Full) come from `/opt/observability/grafana`, mounted
+  read-only. They can't be edited in the UI; change them here and re-run.
+- The domain, `http:80:3000`, and Let's Encrypt when
+  `dokku_letsencrypt_email` is set. The DNS record has to point at the
+  server before the first run, or the certificate request fails.
+- Sign-up and anonymous access off. After five wrong passwords in a row,
+  Grafana blocks that user for five minutes, and a fail2ban jail bans an
+  address after five failed logins in ten minutes, for an hour.
+
+Keep the password out of plain text with
+`ansible-vault encrypt_string --name observability_grafana_admin_password`
+and run with `--ask-vault-pass`.
+
+The admin password only applies when Grafana first creates its database.
+To change it afterwards:
+
+```bash
+dokku enter grafana web grafana cli admin reset-admin-password '<new password>'
+```
+
+then update the variable to match.
+
 ## Labels
 
 Logs:

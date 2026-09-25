@@ -12,3 +12,8 @@ observability_alloy_version: v1.19.2
 observability_node_exporter_version: v1.12.1
 observability_cadvisor_version: v0.60.6
 observability_blackbox_version: v0.28.0
+observability_grafana_domain: ""
+observability_grafana_admin_password: ""
+observability_grafana_version: 13.2.2
+observability_grafana_node_dashboard_revision: 45
+observability_grafana_node_dashboard_checksum: sha256:184c6b7409f306da75525d7772f71945b10cea23ad16b5d78c4698ea0ea51986

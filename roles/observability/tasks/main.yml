@@ -131,3 +131,7 @@
     - name: Rebuild every app's nginx config
       ansible.builtin.command: dokku proxy:build-config --all
       changed_when: true
+
+- name: Set up Grafana
+  ansible.builtin.include_tasks: grafana.yml
+  when: observability_grafana_domain | length > 0

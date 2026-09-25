@@ -29,6 +29,9 @@ there too.
 | `observability_prometheus_retention` | `15d` | How long Prometheus keeps metrics |
 | `observability_loki_retention` | `720h` | How long Loki keeps logs |
 | `observability_journal_units` | ssh, docker | systemd units whose journal goes to Loki |
+| `observability_grafana_domain` | `""` | Grafana's domain, for example `monitoring.example.com`. Empty skips Grafana |
+| `observability_grafana_admin_password` | `""` | Grafana's admin password, 16+ characters. Required with a domain. Only applies on Grafana's first start |
+| `observability_grafana_node_dashboard_revision`, `..._checksum` | `45` | Node Exporter Full revision from grafana.com, and its sha256 |
 | `observability_*_version` | see `roles/observability/defaults` | Image tag for each service. Bump to upgrade |
 
 `ssh_hardening_options` defaults to:

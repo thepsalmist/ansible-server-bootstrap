@@ -1,0 +1,192 @@
+---
+- name: Check the Grafana settings
+  ansible.builtin.assert:
+    that: observability_grafana_admin_password | length >= 16
+    fail_msg: Set observability_grafana_admin_password (16+ characters) in group_vars/all.yml.
+    quiet: true
+
+- name: Create the Grafana provisioning directories
+  ansible.builtin.file:
+    path: "{{ observability_dir }}/grafana/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop: [datasources, dashboards, dashboards/json]
+
+- name: Write Grafana's datasources
+  ansible.builtin.template:
+    src: grafana-datasources.yaml
+    dest: "{{ observability_dir }}/grafana/datasources/datasources.yaml"
+    mode: "0644"
+  register: observability_grafana_datasources
+
+- name: Write Grafana's dashboard provider
+  ansible.builtin.template:
+    src: grafana-dashboards.yaml
+    dest: "{{ observability_dir }}/grafana/dashboards/dashboards.yaml"
+    mode: "0644"
+
+- name: Write the Dokku apps dashboard
+  ansible.builtin.copy:
+    src: dashboards/dokku-apps.json
+    dest: "{{ observability_dir }}/grafana/dashboards/json/dokku-apps.json"
+    mode: "0644"
+
+- name: Download the Node Exporter Full dashboard
+  ansible.builtin.get_url:
+    url: https://grafana.com/api/dashboards/1860/revisions/{{ observability_grafana_node_dashboard_revision }}/download
+    dest: "{{ observability_dir }}/grafana/dashboards/json/node-exporter-full.json"
+    checksum: "{{ observability_grafana_node_dashboard_checksum }}"
+    mode: "0644"
+
+- name: Create Grafana's data directory
+  ansible.builtin.file:
+    path: /var/lib/dokku/data/storage/grafana
+    state: directory
+    owner: "472"
+    group: "472"
+    mode: "0755"
+
+- name: Read Grafana's Dokku app
+  ansible.builtin.command: dokku apps:exists grafana
+  register: observability_grafana_exists
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Create Grafana's Dokku app
+  ansible.builtin.command: dokku apps:create grafana
+  when: observability_grafana_exists.rc != 0
+  changed_when: true
+
+- name: Read Grafana's storage mounts
+  ansible.builtin.command: dokku storage:list grafana
+  register: observability_grafana_mounts
+  changed_when: false
+  check_mode: false
+
+- name: Mount Grafana's data and provisioning
+  ansible.builtin.command:
+    argv: [dokku, "storage:mount", grafana, "{{ item }}"]
+  loop:
+    - /var/lib/dokku/data/storage/grafana:/var/lib/grafana
+    - "{{ observability_dir }}/grafana:/etc/grafana/provisioning:ro"
+  when: item not in observability_grafana_mounts.stdout
+  changed_when: true
+
+- name: Read Grafana's network
+  ansible.builtin.command: dokku network:report grafana --network-attach-post-deploy
+  register: observability_grafana_network
+  changed_when: false
+  check_mode: false
+
+- name: Attach Grafana to the observability network
+  ansible.builtin.command:
+    argv: [dokku, "network:set", grafana, attach-post-deploy, "{{ observability_network }}"]
+  when: observability_grafana_network.stdout != observability_network
+  changed_when: true
+
+- name: Read Grafana's ports
+  ansible.builtin.command: dokku ports:report grafana --ports-map
+  register: observability_grafana_ports
+  changed_when: false
+  check_mode: false
+
+# ports:add, never ports:set: set would drop the https mapping Let's Encrypt adds.
+- name: Route Grafana's port
+  ansible.builtin.command: dokku ports:add grafana http:80:3000
+  when: "'http:80:3000' not in observability_grafana_ports.stdout.split()"
+  changed_when: true
+
+- name: Read Grafana's domains
+  ansible.builtin.command: dokku domains:report grafana --domains-app-vhosts
+  register: observability_grafana_vhosts
+  changed_when: false
+  check_mode: false
+
+- name: Set Grafana's domain
+  ansible.builtin.command:
+    argv: [dokku, "domains:set", grafana, "{{ observability_grafana_domain }}"]
+  when: observability_grafana_vhosts.stdout != observability_grafana_domain
+  changed_when: true
+
+- name: Read Grafana's config
+  ansible.builtin.command: dokku config:export grafana --format json
+  register: observability_grafana_config
+  changed_when: false
+  check_mode: false
+  no_log: true
+
+- name: Set Grafana's config
+  ansible.builtin.command:
+    argv: "{{ ['dokku', 'config:set', '--no-restart', '--encoded', 'grafana'] + observability_grafana_changes }}"
+  vars:
+    observability_grafana_current: "{{ observability_grafana_config.stdout | from_json }}"
+    observability_grafana_wanted:
+      GF_SERVER_ROOT_URL: https://{{ observability_grafana_domain }}/
+      GF_SECURITY_ADMIN_PASSWORD: "{{ observability_grafana_admin_password }}"
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    observability_grafana_changes: >-
+      {%- set changes = [] -%}
+      {%- for key, value in observability_grafana_wanted.items() if observability_grafana_current.get(key) != value -%}
+      {%- set _ = changes.append(key ~ '=' ~ (value | b64encode)) -%}
+      {%- endfor -%}
+      {{ changes }}
+  when: observability_grafana_changes | length > 0
+  changed_when: true
+  register: observability_grafana_config_set
+  no_log: true
+
+- name: Read Grafana's image
+  ansible.builtin.command: dokku git:report grafana --git-source-image
+  register: observability_grafana_image
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Deploy Grafana
+  ansible.builtin.command:
+    argv: [dokku, "git:from-image", grafana, "grafana/grafana:{{ observability_grafana_version }}"]
+  when: observability_grafana_image.stdout != 'grafana/grafana:' ~ observability_grafana_version
+  changed_when: true
+  register: observability_grafana_deploy
+
+- name: Restart Grafana to apply its config
+  ansible.builtin.command: dokku ps:restart grafana
+  when: >-
+    observability_grafana_deploy is skipped
+    and (observability_grafana_datasources is changed or observability_grafana_config_set is changed)
+  changed_when: true
+
+- name: Read Grafana's HTTPS status
+  ansible.builtin.command: dokku letsencrypt:active grafana
+  register: observability_grafana_https
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Turn on HTTPS for Grafana
+  ansible.builtin.command: dokku letsencrypt:enable grafana
+  when: dokku_letsencrypt_email | length > 0 and observability_grafana_https.stdout != 'true'
+  changed_when: true
+
+- name: Ban repeated failed Grafana logins
+  when: firewall_fail2ban
+  block:
+    - name: Write the Grafana fail2ban filter and jail
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: "0644"
+      loop:
+        - { src: fail2ban-grafana-filter.conf, dest: /etc/fail2ban/filter.d/grafana.conf }
+        - { src: fail2ban-grafana-jail.local, dest: /etc/fail2ban/jail.d/grafana.local }
+      register: observability_grafana_fail2ban
+
+    - name: Reload fail2ban  # noqa: no-handler
+      ansible.builtin.service:
+        name: fail2ban
+        state: reloaded
+      when: observability_grafana_fail2ban is changed

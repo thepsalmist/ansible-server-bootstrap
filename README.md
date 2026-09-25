@@ -51,7 +51,7 @@ Keep a root session or the provider's console open during the first run.
 | `roles/firewall` | ufw (SSH + 80/443, deny the rest) and fail2ban |
 | `roles/docker` | Docker Engine from Docker's apt repository |
 | `roles/dokku` | Dokku from its apt repository, deploy keys, global domain, plugins |
-| `roles/observability` | Prometheus, Loki, Alloy and exporters in Compose; JSON nginx access logs |
+| `roles/observability` | Prometheus, Loki, Alloy and exporters in Compose; Grafana as a Dokku app; JSON nginx access logs |
 
 ## Docs
 
