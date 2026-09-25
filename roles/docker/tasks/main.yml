@@ -36,6 +36,36 @@
       - docker-compose-plugin
     update_cache: true
 
+- name: Read Docker's daemon settings
+  ansible.builtin.slurp:
+    src: /etc/docker/daemon.json
+  register: docker_daemon_json
+  failed_when: false
+
+# Merged and compared as data: Dokku's installer adds live-restore here and writes the file unsorted.
+- name: Rotate container logs
+  ansible.builtin.copy:
+    content: "{{ docker_wanted_settings | to_nice_json }}\n"
+    dest: /etc/docker/daemon.json
+    mode: "0644"
+    validate: dockerd --validate --config-file %s
+  vars:
+    docker_current_settings: "{{ docker_daemon_json.content | default('{}' | b64encode) | b64decode | from_json }}"
+    docker_log_settings:
+      log-driver: json-file
+      log-opts:
+        max-size: "{{ docker_log_max_size }}"
+        max-file: "{{ docker_log_max_file | string }}"
+    docker_wanted_settings: "{{ docker_current_settings | combine(docker_log_settings, recursive=true) }}"
+  when: docker_wanted_settings != docker_current_settings
+  register: docker_daemon_config
+
+- name: Restart Docker to apply its daemon settings  # noqa: no-handler
+  ansible.builtin.service:
+    name: docker
+    state: restarted
+  when: docker_daemon_config is changed
+
 - name: Start Docker
   ansible.builtin.service:
     name: docker

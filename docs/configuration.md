@@ -18,6 +18,8 @@ there too.
 | `firewall_allowed_tcp_ports` | `[80, 443]` | TCP ports opened besides SSH. SSH is always allowed |
 | `firewall_fail2ban` | `true` | Install and run fail2ban (default sshd jail) |
 | `firewall_fail2ban_ignoreip` | `[]` | Extra addresses fail2ban never bans. Loopback and the address you deploy from are always included |
+| `docker_log_max_size` | `10m` | Size a container's log reaches before Docker rotates it |
+| `docker_log_max_file` | `3` | Rotated log files Docker keeps per container |
 | `dokku_version` | `0.38.27` | Dokku apt package version. See [dokku.md](dokku.md) before bumping |
 | `dokku_global_domain` | `""` | Global app domain, for example `apps.example.com`. Empty skips it |
 | `dokku_letsencrypt_email` | `""` | Email Let's Encrypt certificates are requested with, for every app. Empty skips it |
