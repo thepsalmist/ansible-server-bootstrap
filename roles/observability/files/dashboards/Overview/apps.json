@@ -1,8 +1,8 @@
 {
   "uid": "dokku-apps",
-  "title": "Dokku apps",
+  "title": "Apps",
   "tags": [
-    "dokku"
+    "observability"
   ],
   "timezone": "browser",
   "schemaVersion": 39,
@@ -415,6 +415,18 @@
           }
         }
       ]
+    }
+  ],
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "observability"
+      ],
+      "asDropdown": false,
+      "keepTime": true,
+      "includeVars": false,
+      "title": "Dashboards"
     }
   ]
 }

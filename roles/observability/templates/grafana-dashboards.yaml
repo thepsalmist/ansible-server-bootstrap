@@ -7,3 +7,4 @@ providers:
     allowUiUpdates: false
     options:
       path: /etc/grafana/provisioning/dashboards/json
+      foldersFromFilesStructure: true
