@@ -12,3 +12,5 @@ base_timezone: Etc/UTC
 # base_swap_size_mb: 2048
 # dokku_global_domain: apps.example.com
 # dokku_letsencrypt_email: you@example.com
+# observability_grafana_domain: monitoring.example.com
+# observability_grafana_admin_password: ""   # 16+ characters; see docs/observability.md to vault it

@@ -79,7 +79,9 @@ default of not rebooting.
 
 **The observability stack runs in Compose, not as Dokku apps.** The
 collectors need host mounts, the host PID namespace and the Docker socket,
-and nothing in the stack serves the public. Prometheus, Alloy and cAdvisor can
+and nothing in the stack serves the public. Grafana, which does, runs as a
+Dokku app instead, so it gets its domain, nginx vhost and Let's Encrypt
+certificate the same way the apps do. Prometheus, Alloy and cAdvisor can
 read the Docker socket, and cAdvisor runs privileged, which makes all three
 root-equivalent; none is reachable from outside the host.
 
