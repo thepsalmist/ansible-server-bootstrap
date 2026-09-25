@@ -10,7 +10,7 @@
     path: "{{ observability_dir }}/grafana/{{ item }}"
     state: directory
     mode: "0755"
-  loop: [datasources, dashboards, dashboards/json]
+  loop: [datasources, dashboards, dashboards/json/Overview, dashboards/json/Details, downloads]
 
 - name: Write Grafana's datasources
   ansible.builtin.template:
@@ -24,19 +24,57 @@
     src: grafana-dashboards.yaml
     dest: "{{ observability_dir }}/grafana/dashboards/dashboards.yaml"
     mode: "0644"
+  register: observability_grafana_provider
 
-- name: Write the Dokku apps dashboard
+- name: Read whether Grafana is deployed
+  ansible.builtin.command: dokku ps:report grafana --deployed
+  register: observability_grafana_deployed
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+# Before the dashboards are written: Grafana only re-files a dashboard whose file changed.
+- name: Restart Grafana to load its datasources and dashboard provider
+  ansible.builtin.command: dokku ps:restart grafana
+  when: >-
+    observability_grafana_deployed.stdout == 'true'
+    and (observability_grafana_datasources is changed or observability_grafana_provider is changed)
+  changed_when: true
+
+- name: Remove dashboards from before the folder layout
+  ansible.builtin.file:
+    path: "{{ observability_dir }}/grafana/dashboards/json/{{ item }}"
+    state: absent
+  loop: [dokku-apps.json, node-exporter-full.json]
+
+- name: Write the overview dashboards
   ansible.builtin.copy:
-    src: dashboards/dokku-apps.json
-    dest: "{{ observability_dir }}/grafana/dashboards/json/dokku-apps.json"
+    src: dashboards/Overview/
+    dest: "{{ observability_dir }}/grafana/dashboards/json/Overview/"
     mode: "0644"
 
 - name: Download the Node Exporter Full dashboard
   ansible.builtin.get_url:
     url: https://grafana.com/api/dashboards/1860/revisions/{{ observability_grafana_node_dashboard_revision }}/download
-    dest: "{{ observability_dir }}/grafana/dashboards/json/node-exporter-full.json"
+    dest: "{{ observability_dir }}/grafana/downloads/node-exporter-full-{{ observability_grafana_node_dashboard_revision }}.json"
     checksum: "{{ observability_grafana_node_dashboard_checksum }}"
     mode: "0644"
+  register: observability_grafana_node_download
+
+- name: Read the Node Exporter Full dashboard
+  ansible.builtin.slurp:
+    src: "{{ observability_grafana_node_download.dest }}"
+  register: observability_grafana_node_dashboard
+
+- name: Write the server details dashboard
+  ansible.builtin.copy:
+    content: "{{ observability_grafana_node_dashboard.content | b64decode | from_json | combine(observability_grafana_node_overrides) | to_json }}\n"
+    dest: "{{ observability_dir }}/grafana/dashboards/json/Details/server-details.json"
+    mode: "0644"
+  vars:
+    observability_grafana_node_overrides:
+      title: Server details (Node Exporter Full)
+      tags: [observability]
 
 - name: Create Grafana's data directory
   ansible.builtin.file:
@@ -85,18 +123,7 @@
   when: observability_grafana_network.stdout != observability_network
   changed_when: true
 
-- name: Read Grafana's ports
-  ansible.builtin.command: dokku ports:report grafana --ports-map
-  register: observability_grafana_ports
-  changed_when: false
-  check_mode: false
-
-# ports:add, never ports:set: set would drop the https mapping Let's Encrypt adds.
-- name: Route Grafana's port
-  ansible.builtin.command: dokku ports:add grafana http:80:3000
-  when: "'http:80:3000' not in observability_grafana_ports.stdout.split()"
-  changed_when: true
-
+# Before ports: on an undeployed app, domains:set clears the port mapping.
 - name: Read Grafana's domains
   ansible.builtin.command: dokku domains:report grafana --domains-app-vhosts
   register: observability_grafana_vhosts
@@ -107,6 +134,18 @@
   ansible.builtin.command:
     argv: [dokku, "domains:set", grafana, "{{ observability_grafana_domain }}"]
   when: observability_grafana_vhosts.stdout != observability_grafana_domain
+  changed_when: true
+
+- name: Read Grafana's ports
+  ansible.builtin.command: dokku ports:report grafana --ports-map
+  register: observability_grafana_ports
+  changed_when: false
+  check_mode: false
+
+# ports:add, never ports:set: set would drop the https mapping Let's Encrypt adds.
+- name: Route Grafana's port
+  ansible.builtin.command: dokku ports:add grafana http:80:3000
+  when: "'http:80:3000' not in observability_grafana_ports.stdout.split()"
   changed_when: true
 
 - name: Read Grafana's config
@@ -128,6 +167,7 @@
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_AUTH_ANONYMOUS_ENABLED: "false"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/json/Overview/server.json
     observability_grafana_changes: >-
       {%- set changes = [] -%}
       {%- for key, value in observability_grafana_wanted.items() if observability_grafana_current.get(key) != value -%}
@@ -155,9 +195,7 @@
 
 - name: Restart Grafana to apply its config
   ansible.builtin.command: dokku ps:restart grafana
-  when: >-
-    observability_grafana_deploy is skipped
-    and (observability_grafana_datasources is changed or observability_grafana_config_set is changed)
+  when: observability_grafana_deploy is skipped and observability_grafana_config_set is changed
   changed_when: true
 
 - name: Read Grafana's HTTPS status

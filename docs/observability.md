@@ -38,9 +38,18 @@ in `group_vars/all.yml` and the role deploys Grafana as the Dokku app
   the version redeploys it.
 - Data in `/var/lib/dokku/data/storage/grafana`, so users and settings
   survive rebuilds and upgrades.
-- Datasources (Prometheus as the default, Loki) and dashboards (Dokku apps,
-  Node Exporter Full) come from `/opt/observability/grafana`, mounted
-  read-only. They can't be edited in the UI; change them here and re-run.
+- Datasources (Prometheus as the default, Loki) and dashboards come from
+  `/opt/observability/grafana`, mounted read-only. They can't be edited in
+  the UI; change them here and re-run. Dashboards are in two folders:
+
+  | Folder | Dashboard | Shows |
+  |---|---|---|
+  | Overview | Server (the home page) | CPU, memory, disk and load at a glance, then host graphs and the busiest containers |
+  | Overview | Apps | Per app: health check, certificate, traffic, errors, response time, containers, logs |
+  | Details | Server details (Node Exporter Full) | Every host metric, from grafana.com |
+
+  Each has a Dashboards link to the others. The overviews' JSON is in
+  `roles/observability/files/dashboards/Overview/`.
 - The domain, `http:80:3000`, and Let's Encrypt when
   `dokku_letsencrypt_email` is set. The DNS record has to point at the
   server before the first run, or the certificate request fails.
