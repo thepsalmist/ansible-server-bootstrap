@@ -7,6 +7,8 @@ datasources:
     url: http://prometheus:9090
     isDefault: true
     editable: false
+    jsonData:
+      timeInterval: {{ observability_prometheus_scrape_interval }}
 
   - name: Loki
     uid: loki
