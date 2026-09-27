@@ -4,6 +4,7 @@ observability_network: observability
 observability_subnet: 172.30.0.0/24
 observability_gateway: 172.30.0.1
 observability_prometheus_retention: 15d
+observability_prometheus_scrape_interval: 30s
 observability_loki_retention: 720h
 observability_journal_units: [ssh.service, docker.service]
 observability_prometheus_version: v3.15.0

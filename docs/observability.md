@@ -45,7 +45,7 @@ in `group_vars/all.yml` and the role deploys Grafana as the Dokku app
   | Folder | Dashboard | Shows |
   |---|---|---|
   | Overview | Server (the home page) | CPU, memory, disk and load at a glance, then host graphs and the busiest containers |
-  | Overview | Apps | Per app: health check, certificate, traffic, errors, response time, containers, logs |
+  | Overview | Apps | Per app: health check, certificate, traffic, errors and response time (excluding health-check probes), containers, logs |
   | Details | Server details (Node Exporter Full) | Every host metric, from grafana.com |
 
   Each has a Dashboards link to the others. The overviews' JSON is in

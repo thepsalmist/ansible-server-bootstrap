@@ -131,7 +131,27 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "s",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1209600
+              },
+              {
+                "color": "green",
+                "value": 2592000
+              }
+            ]
+          }
         },
         "overrides": []
       }
@@ -151,7 +171,7 @@
       },
       "targets": [
         {
-          "expr": "sum(count_over_time({job=\"nginx\", app=\"$app\"} [$__range]))",
+          "expr": "sum(count_over_time({job=\"nginx\", app=\"$app\"} | json user_agent | user_agent !~ \"Blackbox-Exporter/.*\" [$__range])) or vector(0)",
           "queryType": "instant",
           "refId": "A",
           "datasource": {
@@ -176,7 +196,7 @@
       },
       "targets": [
         {
-          "expr": "(sum(count_over_time({job=\"nginx\", app=\"$app\"} | json status | status >= 500 [$__range])) or vector(0)) / sum(count_over_time({job=\"nginx\", app=\"$app\"} [$__range]))",
+          "expr": "(sum(count_over_time({job=\"nginx\", app=\"$app\"} | json status, user_agent | user_agent !~ \"Blackbox-Exporter/.*\" | status >= 500 [$__range])) or vector(0)) / sum(count_over_time({job=\"nginx\", app=\"$app\"} | json user_agent | user_agent !~ \"Blackbox-Exporter/.*\" [$__range]))",
           "queryType": "instant",
           "refId": "A",
           "datasource": {
@@ -219,7 +239,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (status) (rate({job=\"nginx\", app=\"$app\"} | json status [$__auto]))",
+          "expr": "sum by (status) (rate({job=\"nginx\", app=\"$app\"} | json status, user_agent | user_agent !~ \"Blackbox-Exporter/.*\" [$__auto]))",
           "legendFormat": "{{status}}",
           "refId": "A",
           "datasource": {
@@ -244,7 +264,7 @@
       },
       "targets": [
         {
-          "expr": "quantile_over_time(0.5, {job=\"nginx\", app=\"$app\"} | json request_time | unwrap request_time [$__auto]) by (app)",
+          "expr": "quantile_over_time(0.5, {job=\"nginx\", app=\"$app\"} | json request_time, user_agent | user_agent !~ \"Blackbox-Exporter/.*\" | unwrap request_time [$__auto]) by (app)",
           "legendFormat": "p50",
           "refId": "A",
           "datasource": {
@@ -253,7 +273,7 @@
           }
         },
         {
-          "expr": "quantile_over_time(0.95, {job=\"nginx\", app=\"$app\"} | json request_time | unwrap request_time [$__auto]) by (app)",
+          "expr": "quantile_over_time(0.95, {job=\"nginx\", app=\"$app\"} | json request_time, user_agent | user_agent !~ \"Blackbox-Exporter/.*\" | unwrap request_time [$__auto]) by (app)",
           "legendFormat": "p95",
           "refId": "B",
           "datasource": {
