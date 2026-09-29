@@ -28,6 +28,7 @@ there too.
 | `observability_gateway` | `172.30.0.1` | That subnet's gateway, where node-exporter listens |
 | `observability_prometheus_retention` | `15d` | How long Prometheus keeps metrics |
 | `observability_loki_retention` | `720h` | How long Loki keeps logs |
+| `observability_tempo_retention` | `168h` | How long Tempo keeps traces |
 | `observability_journal_units` | ssh, docker | systemd units whose journal goes to Loki |
 | `observability_grafana_domain` | `""` | Grafana's domain, for example `monitoring.example.com`. Empty skips Grafana |
 | `observability_grafana_admin_password` | `""` | Grafana's admin password, 16+ characters. Required with a domain. Only applies on Grafana's first start |

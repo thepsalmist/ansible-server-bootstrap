@@ -23,7 +23,7 @@
     path: "{{ observability_dir }}/{{ item }}"
     state: directory
     mode: "0755"
-  loop: [prometheus, loki, alloy, blackbox]
+  loop: [prometheus, loki, alloy, blackbox, tempo]
 
 - name: Write the observability configs
   ansible.builtin.template:
@@ -35,6 +35,7 @@
     - { src: loki.yaml.j2, dest: loki/config.yaml, service: loki }
     - { src: config.alloy.j2, dest: alloy/config.alloy, service: alloy }
     - { src: blackbox.yml, dest: blackbox/config.yml, service: blackbox }
+    - { src: tempo.yaml.j2, dest: tempo/tempo.yaml, service: tempo }
   loop_control:
     label: "{{ item.dest }}"
   register: observability_configs

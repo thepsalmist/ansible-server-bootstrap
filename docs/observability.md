@@ -11,7 +11,8 @@
    |---|---|
    | Prometheus | Metrics, kept for `observability_prometheus_retention` |
    | Loki | Logs, kept for `observability_loki_retention` |
-   | Alloy | Ships container logs, Dokku's nginx access logs, `/var/log/fail2ban.log` and the journal units in `observability_journal_units` |
+   | Tempo | Traces, kept for `observability_tempo_retention` |
+   | Alloy | Ships container logs, Dokku's nginx access logs, `/var/log/fail2ban.log` and the journal units in `observability_journal_units`. Receives apps' OTLP traces and metrics and forwards them to Tempo and Prometheus |
    | node-exporter | Host metrics |
    | cAdvisor | Per-container CPU, memory and network |
    | blackbox-exporter | Probes `https://<domain>/healthz` for every Dokku app domain |
@@ -26,7 +27,8 @@
 
 Nothing is published on the host except node-exporter, which listens on
 the network's gateway address (`observability_gateway:9100`). One ufw rule
-lets the network reach it.
+lets the network reach it. Alloy's OTLP ports, 4317 (gRPC) and 4318 (HTTP),
+are only reachable on the `observability` network.
 
 ## Grafana
 
@@ -38,8 +40,8 @@ in `group_vars/all.yml` and the role deploys Grafana as the Dokku app
   the version redeploys it.
 - Data in `/var/lib/dokku/data/storage/grafana`, so users and settings
   survive rebuilds and upgrades.
-- Datasources (Prometheus as the default, Loki) and dashboards come from
-  `/opt/observability/grafana`, mounted read-only. They can't be edited in
+- Datasources (Prometheus as the default, Loki, Tempo) and dashboards come
+  from `/opt/observability/grafana`, mounted read-only. They can't be edited in
   the UI; change them here and re-run. Dashboards are in two folders:
 
   | Folder | Dashboard | Shows |
@@ -50,6 +52,9 @@ in `group_vars/all.yml` and the role deploys Grafana as the Dokku app
 
   Each has a Dashboards link to the others. The overviews' JSON is in
   `roles/observability/files/dashboards/Overview/`.
+- A JSON log line with a `trace_id` field gets a View trace link to Tempo,
+  and a trace links to its logs: the `app` matching the trace's
+  `service.name`, filtered on the trace ID.
 - The domain, `http:80:3000`, and Let's Encrypt when
   `dokku_letsencrypt_email` is set. The DNS record has to point at the
   server before the first run, or the certificate request fails.
@@ -81,13 +86,47 @@ Logs:
 | `container`, `stream` | Container name, `stdout` or `stderr` |
 | `unit` | systemd unit, for journal entries |
 
+Metrics pushed over OTLP:
+
+| Label | Value |
+|---|---|
+| `app` | The resource's `service.name` |
+| `process_type`, `deployment_environment` | The `process_type` and `deployment.environment` resource attributes |
+| `job`, `instance` | `service.name` (prefixed with `service.namespace/` when set) and `service.instance.id`, Prometheus's defaults |
+
 Paths, IDs and users stay in the log line. Parse the JSON at query time:
 
 ```logql
 {job="nginx", app="myapp"} | json | status >= 500
 ```
 
-## Adding an app's metrics
+## Sending an app's traces and metrics
+
+Apps push traces and metrics over OTLP to Alloy, with the OpenTelemetry SDK.
+Logs stay on stdout. Set `OTEL_SERVICE_NAME` to the Dokku app name: it
+becomes the `app` label on metrics and links traces to the app's logs.
+
+```bash
+dokku network:set myapp attach-post-deploy observability
+dokku config:set myapp \
+  OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318 \
+  OTEL_SERVICE_NAME=myapp \
+  OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production
+```
+
+Set these resource attributes in the app, since one config applies to all
+its processes:
+
+- `process_type`: `web` or `worker`.
+- `service.instance.id`: unique per process, for example the hostname and
+  PID. Without it, every worker of an app pushes the same series and their
+  counters overwrite each other.
+
+Log `trace_id` as a field of each JSON log line so Grafana can link the line
+to its trace. Alloy doesn't accept OTLP logs; set `OTEL_LOGS_EXPORTER=none`
+if the SDK exports logs by default.
+
+### Scraping a metrics port instead
 
 Prometheus scrapes any container on the `observability` network that has an
 `observability.metrics.port` label, at `http://<container>:<port>/metrics`,
@@ -107,4 +146,14 @@ On the server:
 ```bash
 docker run --rm --network observability curlimages/curl -s http://prometheus:9090/api/v1/targets
 docker run --rm --network observability curlimages/curl -s http://loki:3100/loki/api/v1/labels
+```
+
+To send a test trace and metric through Alloy:
+
+```bash
+tg=ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen
+docker run --rm --network observability $tg traces --traces 1 --otlp-http --otlp-endpoint alloy:4318 --otlp-insecure --service otlptest
+docker run --rm --network observability $tg metrics --metrics 1 --otlp-http --otlp-endpoint alloy:4318 --otlp-insecure --service otlptest
+docker run --rm --network observability curlimages/curl -s -G http://tempo:3200/api/search --data-urlencode 'q={}'
+docker run --rm --network observability curlimages/curl -s -G http://prometheus:9090/api/v1/series --data-urlencode 'match[]={app="otlptest"}'
 ```
