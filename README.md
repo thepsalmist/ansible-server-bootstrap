@@ -4,7 +4,7 @@ Takes a fresh Ubuntu 22.04/24.04 server to a hardened Docker + Dokku host:
 a key-only sudo admin, root and password SSH disabled (verified, with
 rollback), ufw + fail2ban, unattended security upgrades, Python tooling,
 Docker Engine, Dokku with its postgres, redis and letsencrypt
-plugins, and Prometheus, Loki and Alloy collecting its metrics and logs. Safe to re-run; every run converges.
+plugins, and Prometheus, Loki, Tempo and Alloy collecting its metrics, logs and traces. Safe to re-run; every run converges.
 
 ## Setup (on your workstation)
 
@@ -51,7 +51,7 @@ Keep a root session or the provider's console open during the first run.
 | `roles/firewall` | ufw (SSH + 80/443, deny the rest) and fail2ban |
 | `roles/docker` | Docker Engine from Docker's apt repository |
 | `roles/dokku` | Dokku from its apt repository, deploy keys, global domain, plugins |
-| `roles/observability` | Prometheus, Loki, Alloy and exporters in Compose; Grafana as a Dokku app; JSON nginx access logs |
+| `roles/observability` | Prometheus, Loki, Tempo, Alloy and exporters in Compose; OTLP ingestion; Grafana as a Dokku app; JSON nginx access logs |
 
 ## Docs
 
@@ -59,5 +59,5 @@ Keep a root session or the provider's console open during the first run.
 - [Configuration](docs/configuration.md): every variable and tag
 - [SSH hardening](docs/ssh-hardening.md): lockout protection and recovery
 - [Dokku](docs/dokku.md): deploying, domains, TLS, plugins, upgrades
-- [Observability](docs/observability.md): metrics, logs, labels, adding an app
+- [Observability](docs/observability.md): metrics, logs, traces, labels, adding an app
 - [Testing](docs/testing.md): linting and checking a server

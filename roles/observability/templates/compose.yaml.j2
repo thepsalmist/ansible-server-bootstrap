@@ -9,6 +9,7 @@ volumes:
   prometheus-data:
   loki-data:
   alloy-data:
+  tempo-data:
 
 services:
   prometheus:
@@ -17,6 +18,7 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
       - --storage.tsdb.retention.time={{ observability_prometheus_retention }}
+      - --web.enable-otlp-receiver
     group_add: ["{{ observability_docker_gid }}"]
     volumes:
       - ./prometheus:/etc/prometheus:ro
@@ -46,6 +48,14 @@ services:
       - /var/log:/var/log:ro
       - /run/log/journal:/run/log/journal:ro
       - /etc/machine-id:/etc/machine-id:ro
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:{{ observability_tempo_version }}
+    command: -config.file=/etc/tempo/tempo.yaml
+    volumes:
+      - ./tempo:/etc/tempo:ro
+      - tempo-data:/var/tempo
     restart: unless-stopped
 
   node-exporter:

@@ -85,6 +85,12 @@ certificate the same way the apps do. Prometheus, Alloy and cAdvisor can
 read the Docker socket, and cAdvisor runs privileged, which makes all three
 root-equivalent; none is reachable from outside the host.
 
+**Apps push traces and metrics over OTLP instead of exposing a scrape
+port.** An app server with several worker processes can't share one
+`/metrics` port without prometheus_client's multiprocess mode. Pushing
+needs no port, so nothing can leak through Dokku's nginx, and one SDK
+covers traces and metrics.
+
 **node-exporter uses host networking.** Inside a container it would report
 the container's network, not the host's. It listens only on the
 observability network's gateway, never a public address.
