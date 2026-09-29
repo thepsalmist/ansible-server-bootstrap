@@ -19,6 +19,7 @@ services:
       - --storage.tsdb.path=/prometheus
       - --storage.tsdb.retention.time={{ observability_prometheus_retention }}
       - --web.enable-otlp-receiver
+      - --enable-feature=created-timestamp-zero-ingestion
     group_add: ["{{ observability_docker_gid }}"]
     volumes:
       - ./prometheus:/etc/prometheus:ro

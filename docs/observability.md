@@ -47,7 +47,7 @@ in `group_vars/all.yml` and the role deploys Grafana as the Dokku app
   | Folder | Dashboard | Shows |
   |---|---|---|
   | Overview | Server (the home page) | CPU, memory, disk and load at a glance, then host graphs and the busiest containers |
-  | Overview | Apps | Per app: health check, certificate, traffic, errors and response time (excluding health-check probes), containers, logs |
+  | Overview | Apps | Per app: health check, certificate, traffic, errors and response time (excluding health-check probes), containers, processes reporting, request rate and p95 latency by route from the app's metrics, logs |
   | Details | Server details (Node Exporter Full) | Every host metric, from grafana.com |
 
   Each has a Dashboards link to the others. The overviews' JSON is in
@@ -107,7 +107,7 @@ Logs stay on stdout. Set `OTEL_SERVICE_NAME` to the Dokku app name: it
 becomes the `app` label on metrics and links traces to the app's logs.
 
 ```bash
-dokku network:set myapp attach-post-deploy observability
+dokku network:set myapp attach-post-create observability
 dokku config:set myapp \
   OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318 \
   OTEL_SERVICE_NAME=myapp \
@@ -122,6 +122,19 @@ its processes:
   PID. Without it, every worker of an app pushes the same series and their
   counters overwrite each other.
 
+Use `attach-post-create`, not `attach-post-deploy`: post-deploy only attaches
+the deployed web and worker containers, so `dokku run` commands can't reach
+`alloy`, and a container starts before it's attached, so it loses what it
+sends until then.
+
+The Apps dashboard's request rate and p95 latency come from the standard
+`http.server.request.duration` histogram, with `http.route` and
+`http.response.status_code`, which the OpenTelemetry HTTP instrumentations
+record.
+
+Prometheus writes a zero at each counter's start time, so a process's first
+increment, or a `dokku run` command's only one, counts in `increase()`.
+
 Log `trace_id` as a field of each JSON log line so Grafana can link the line
 to its trace. Alloy doesn't accept OTLP logs; set `OTEL_LOGS_EXPORTER=none`
 if the SDK exports logs by default.
@@ -135,7 +148,7 @@ with `ports:add`: Dokku's nginx would make it public.
 
 ```bash
 dokku docker-options:add myapp deploy "--label observability.metrics.port=9000"
-dokku network:set myapp attach-post-deploy observability
+dokku network:set myapp attach-post-create observability
 dokku ps:rebuild myapp
 ```
 
