@@ -377,7 +377,7 @@
     },
     {
       "type": "stat",
-      "title": "Metrics endpoints up",
+      "title": "Processes reporting",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -390,15 +390,88 @@
       },
       "targets": [
         {
-          "expr": "up{job=\"apps\", app=\"$app\"}",
-          "legendFormat": "{{instance}}",
+          "expr": "count by (process_type) (target_info{app=\"$app\"})",
+          "legendFormat": "{{process_type}}",
           "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "expr": "sum by (process_type) (up{job=\"apps\", app=\"$app\"})",
+          "legendFormat": "{{process_type}} (scraped)",
+          "refId": "B",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           }
         }
       ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests per second by route and status",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 29
+      },
+      "interval": "1m",
+      "targets": [
+        {
+          "expr": "sum by (http_route, http_response_status_code) (rate(http_server_request_duration_seconds_count{app=\"$app\"}[$__rate_interval]))",
+          "legendFormat": "{{http_route}} {{http_response_status_code}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "p95 latency by route",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 29
+      },
+      "interval": "1m",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{app=\"$app\"}[$__rate_interval])))",
+          "legendFormat": "{{http_route}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
     },
     {
       "type": "row",
@@ -408,7 +481,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 29
+        "y": 37
       },
       "panels": []
     },
@@ -423,7 +496,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 38
       },
       "targets": [
         {
