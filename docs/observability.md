@@ -47,7 +47,7 @@ in `group_vars/all.yml` and the role deploys Grafana as the Dokku app
   | Folder | Dashboard | Shows |
   |---|---|---|
   | Overview | Server (the home page) | CPU, memory, disk and load at a glance, then host graphs and the busiest containers |
-  | Overview | Apps | Per app: health check, certificate, requests and server errors, processes reporting; requests and p95 response time by route from the app's metrics; requests by status and response time from nginx; containers; log lines by level and logs. nginx figures exclude health-check probes |
+  | Overview | Apps | Per app: health check, certificate, requests and server errors, processes reporting; requests and p95 response time by page, and other requests, from the app's metrics; requests by status and response time from nginx; containers; log lines by level and logs. nginx figures exclude health-check probes |
   | Details | Server details (Node Exporter Full) | Every host metric, from grafana.com |
 
   Each has a Dashboards link to the others. The overviews' JSON is in
@@ -127,10 +127,12 @@ the deployed web and worker containers, so `dokku run` commands can't reach
 `alloy`, and a container starts before it's attached, so it loses what it
 sends until then.
 
-The Apps dashboard's Pages row (requests and p95 response time by route)
+The Apps dashboard's Pages row (requests and p95 response time by page)
 comes from the standard `http.server.request.duration` histogram, with
-`http.route`, which the OpenTelemetry HTTP instrumentations record. The row
-is hidden for apps that don't push metrics.
+`http.route`, which the OpenTelemetry HTTP instrumentations record. Requests
+answered before URL routing have no `http.route`; Other requests groups them
+by status into static files, redirects, not found and other. The row is
+hidden for apps that don't push metrics.
 
 Prometheus writes a zero at each counter's start time, so a process's first
 increment, or a `dokku run` command's only one, counts in `increase()`.
