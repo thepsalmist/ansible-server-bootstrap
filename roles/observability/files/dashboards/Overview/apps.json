@@ -425,7 +425,7 @@
       "description": "Requests the app handled in the selected time range, busiest route first. (unmatched) is requests that matched no route, usually 404s.",
       "targets": [
         {
-          "expr": "sort_desc(label_replace(sum by (http_route) (increase(http_server_request_duration_seconds_count{app=\"$app\"}[$__range])), \"http_route\", \"(unmatched)\", \"http_route\", \"\") > 0)",
+          "expr": "sort_desc(label_replace(sum by (http_route) (increase(http_server_request_duration_seconds_count{app=\"$app\"}[$__range] anchored)), \"http_route\", \"(unmatched)\", \"http_route\", \"\") > 0)",
           "legendFormat": "{{http_route}}",
           "instant": true,
           "range": false,
@@ -481,7 +481,7 @@
       "description": "95% of requests to each route finished faster than this, over the selected time range. Yellow from 300 ms, red from 800 ms.",
       "targets": [
         {
-          "expr": "sort_desc(label_replace(histogram_quantile(0.95, sum by (le, http_route) (increase(http_server_request_duration_seconds_bucket{app=\"$app\"}[$__range]))), \"http_route\", \"(unmatched)\", \"http_route\", \"\") > 0)",
+          "expr": "sort_desc(label_replace(histogram_quantile(0.95, sum by (le, http_route) (increase(http_server_request_duration_seconds_bucket{app=\"$app\"}[$__range] anchored))), \"http_route\", \"(unmatched)\", \"http_route\", \"\") > 0)",
           "legendFormat": "{{http_route}}",
           "instant": true,
           "range": false,

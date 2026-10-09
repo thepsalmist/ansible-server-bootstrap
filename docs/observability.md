@@ -135,6 +135,11 @@ is hidden for apps that don't push metrics.
 Prometheus writes a zero at each counter's start time, so a process's first
 increment, or a `dokku run` command's only one, counts in `increase()`.
 
+Plain `increase()` estimates: it stretches the rise out to the edges of the
+range, so a counter that went up once can read 1.5. To count rare events
+exactly, such as payments, write `increase(<counter>[<range>] anchored)`, as
+the Pages row does.
+
 Log `trace_id` as a field of each JSON log line so Grafana can link the line
 to its trace. Alloy doesn't accept OTLP logs; set `OTEL_LOGS_EXPORTER=none`
 if the SDK exports logs by default.
