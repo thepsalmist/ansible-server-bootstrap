@@ -582,7 +582,7 @@
           "custom": {
             "drawStyle": "bars",
             "fillOpacity": 80,
-            "lineWidth": 1,
+            "lineWidth": 0,
             "barAlignment": -1,
             "stacking": {
               "mode": "normal",
@@ -828,12 +828,12 @@
         "uid": "loki"
       },
       "gridPos": {
-        "h": 10,
-        "w": 8,
+        "h": 6,
+        "w": 24,
         "x": 0,
         "y": 34
       },
-      "maxDataPoints": 56,
+      "maxDataPoints": 168,
       "interval": "1m",
       "targets": [
         {
@@ -853,7 +853,7 @@
           "custom": {
             "drawStyle": "bars",
             "fillOpacity": 80,
-            "lineWidth": 1,
+            "lineWidth": 0,
             "barAlignment": -1,
             "stacking": {
               "mode": "normal",
@@ -873,7 +873,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "green"
+                  "fixedColor": "blue"
                 }
               }
             ]
@@ -948,7 +948,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "blue"
+                  "fixedColor": "text"
                 }
               }
             ]
@@ -963,7 +963,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "blue"
+                  "fixedColor": "text"
                 }
               }
             ]
@@ -994,10 +994,10 @@
         "uid": "loki"
       },
       "gridPos": {
-        "h": 10,
-        "w": 16,
-        "x": 8,
-        "y": 34
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 40
       },
       "targets": [
         {
@@ -1008,7 +1008,14 @@
             "uid": "loki"
           }
         }
-      ]
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "prettifyLogMessage": false
+      }
     }
   ],
   "links": [
