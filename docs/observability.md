@@ -47,7 +47,7 @@ in `group_vars/all.yml` and the role deploys Grafana as the Dokku app
   | Folder | Dashboard | Shows |
   |---|---|---|
   | Overview | Server (the home page) | CPU, memory, disk and load at a glance, then host graphs and the busiest containers |
-  | Overview | Apps | Per app: health check, certificate, traffic, errors and response time (excluding health-check probes), containers, processes reporting, request rate and p95 latency by route from the app's metrics, logs |
+  | Overview | Apps | Per app: health check, certificate, requests and server errors, processes reporting; requests and p95 response time by route from the app's metrics; requests by status and response time from nginx; containers; log lines by level and logs. nginx figures exclude health-check probes |
   | Details | Server details (Node Exporter Full) | Every host metric, from grafana.com |
 
   Each has a Dashboards link to the others. The overviews' JSON is in
@@ -127,10 +127,10 @@ the deployed web and worker containers, so `dokku run` commands can't reach
 `alloy`, and a container starts before it's attached, so it loses what it
 sends until then.
 
-The Apps dashboard's request rate and p95 latency come from the standard
-`http.server.request.duration` histogram, with `http.route` and
-`http.response.status_code`, which the OpenTelemetry HTTP instrumentations
-record.
+The Apps dashboard's Pages row (requests and p95 response time by route)
+comes from the standard `http.server.request.duration` histogram, with
+`http.route`, which the OpenTelemetry HTTP instrumentations record. The row
+is hidden for apps that don't push metrics.
 
 Prometheus writes a zero at each counter's start time, so a process's first
 increment, or a `dokku run` command's only one, counts in `increase()`.

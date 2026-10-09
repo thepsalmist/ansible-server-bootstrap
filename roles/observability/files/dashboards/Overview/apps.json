@@ -30,6 +30,21 @@
         "definition": "label_values(container_memory_working_set_bytes{container_label_com_dokku_app_name!=\"\"}, container_label_com_dokku_app_name)",
         "refresh": 2,
         "sort": 1
+      },
+      {
+        "name": "otlp",
+        "type": "query",
+        "hide": 2,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(target_info{app=\"$app\"}, app)",
+          "refId": "otlp"
+        },
+        "definition": "label_values(target_info{app=\"$app\"}, app)",
+        "refresh": 2
       }
     ]
   },
@@ -55,7 +70,7 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 6,
+        "w": 4,
         "x": 0,
         "y": 1
       },
@@ -104,6 +119,16 @@
           }
         },
         "overrides": []
+      },
+      "options": {
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
       }
     },
     {
@@ -115,8 +140,8 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 6,
-        "x": 6,
+        "w": 4,
+        "x": 4,
         "y": 1
       },
       "targets": [
@@ -154,24 +179,35 @@
           }
         },
         "overrides": []
+      },
+      "options": {
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
       }
     },
     {
       "type": "stat",
-      "title": "Requests (range)",
+      "title": "Requests",
       "datasource": {
         "type": "loki",
         "uid": "loki"
       },
       "gridPos": {
         "h": 5,
-        "w": 6,
-        "x": 12,
+        "w": 5,
+        "x": 8,
         "y": 1
       },
+      "description": "Requests nginx served in the selected time range, not counting health checks.",
       "targets": [
         {
-          "expr": "sum(count_over_time({job=\"nginx\", app=\"$app\"} | json user_agent | user_agent !~ \"Blackbox-Exporter/.*\" [$__range])) or vector(0)",
+          "expr": "sum(count_over_time({job=\"nginx\", app=\"$app\"} | json status, user_agent | user_agent !~ \"Blackbox-Exporter/.*\" [$__range])) or vector(0)",
           "queryType": "instant",
           "refId": "A",
           "datasource": {
@@ -179,14 +215,149 @@
             "uid": "loki"
           }
         }
-      ]
+      ],
+      "options": {
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      }
     },
     {
       "type": "stat",
-      "title": "5xx share (range)",
+      "title": "Server errors (5xx)",
       "datasource": {
         "type": "loki",
         "uid": "loki"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 13,
+        "y": 1
+      },
+      "description": "Responses with status 500 or above. The share turns orange at 1% and red at 5%.",
+      "targets": [
+        {
+          "expr": "sum(count_over_time({job=\"nginx\", app=\"$app\"} | json status, user_agent | user_agent !~ \"Blackbox-Exporter/.*\" | status >= 500 [$__range])) or vector(0)",
+          "queryType": "instant",
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          }
+        },
+        {
+          "expr": "(sum(count_over_time({job=\"nginx\", app=\"$app\"} | json status, user_agent | user_agent !~ \"Blackbox-Exporter/.*\" | status >= 500 [$__range])) or vector(0)) / sum(count_over_time({job=\"nginx\", app=\"$app\"} | json status, user_agent | user_agent !~ \"Blackbox-Exporter/.*\" [$__range]))",
+          "queryType": "instant",
+          "refId": "B",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          }
+        }
+      ],
+      "options": {
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.05
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "errors"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "of requests"
+              },
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Processes reporting",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 5,
@@ -196,8 +367,207 @@
       },
       "targets": [
         {
-          "expr": "(sum(count_over_time({job=\"nginx\", app=\"$app\"} | json status, user_agent | user_agent !~ \"Blackbox-Exporter/.*\" | status >= 500 [$__range])) or vector(0)) / sum(count_over_time({job=\"nginx\", app=\"$app\"} | json user_agent | user_agent !~ \"Blackbox-Exporter/.*\" [$__range]))",
-          "queryType": "instant",
+          "expr": "count by (process_type) (target_info{app=\"$app\"})",
+          "legendFormat": "{{process_type}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "expr": "sum by (process_type) (up{job=\"apps\", app=\"$app\"})",
+          "legendFormat": "{{process_type}} (scraped)",
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "options": {
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Pages",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "repeat": "otlp",
+      "panels": []
+    },
+    {
+      "type": "bargauge",
+      "title": "Requests by route",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 7
+      },
+      "description": "Requests the app handled in the selected time range, busiest route first. (unmatched) is requests that matched no route, usually 404s.",
+      "targets": [
+        {
+          "expr": "sort_desc(label_replace(sum by (http_route) (increase(http_server_request_duration_seconds_count{app=\"$app\"}[$__range])), \"http_route\", \"(unmatched)\", \"http_route\", \"\") > 0)",
+          "legendFormat": "{{http_route}}",
+          "instant": true,
+          "range": false,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "namePlacement": "left",
+        "valueMode": "color",
+        "sizing": "manual",
+        "minVizHeight": 22,
+        "maxVizHeight": 22,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "displayMode": "gradient"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "p95 response time by route",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 7
+      },
+      "description": "95% of requests to each route finished faster than this, over the selected time range. Yellow from 300 ms, red from 800 ms.",
+      "targets": [
+        {
+          "expr": "sort_desc(label_replace(histogram_quantile(0.95, sum by (le, http_route) (increase(http_server_request_duration_seconds_bucket{app=\"$app\"}[$__range]))), \"http_route\", \"(unmatched)\", \"http_route\", \"\") > 0)",
+          "legendFormat": "{{http_route}}",
+          "instant": true,
+          "range": false,
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "namePlacement": "left",
+        "valueMode": "color",
+        "sizing": "manual",
+        "minVizHeight": 22,
+        "maxVizHeight": 22,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "displayMode": "lcd"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.3
+              },
+              {
+                "color": "red",
+                "value": 0.8
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "row",
+      "title": "Traffic",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests per $__interval by status",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "maxDataPoints": 168,
+      "interval": "1m",
+      "targets": [
+        {
+          "expr": "sum by (status) (count_over_time({job=\"nginx\", app=\"$app\"} | json status, user_agent | user_agent !~ \"Blackbox-Exporter/.*\" | label_format status=`{{ substr 0 1 .status }}xx` [$__interval]))",
+          "legendFormat": "{{status}}",
           "refId": "A",
           "datasource": {
             "type": "loki",
@@ -207,47 +577,83 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit"
-        },
-        "overrides": []
-      }
-    },
-    {
-      "type": "row",
-      "title": "Traffic (nginx)",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 6
-      },
-      "panels": []
-    },
-    {
-      "type": "timeseries",
-      "title": "Requests per second by status",
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 7
-      },
-      "targets": [
-        {
-          "expr": "sum by (status) (rate({job=\"nginx\", app=\"$app\"} | json status, user_agent | user_agent !~ \"Blackbox-Exporter/.*\" [$__auto]))",
-          "legendFormat": "{{status}}",
-          "refId": "A",
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 0,
+            "barAlignment": -1,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "showPoints": "never"
           }
-        }
-      ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "2xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "3xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "4xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "5xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "type": "timeseries",
@@ -260,12 +666,15 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 7
+        "y": 16
       },
+      "maxDataPoints": 28,
+      "interval": "1m",
+      "description": "Measured by nginx over wide time slots, so each point covers enough requests to mean something.",
       "targets": [
         {
-          "expr": "quantile_over_time(0.5, {job=\"nginx\", app=\"$app\"} | json request_time, user_agent | user_agent !~ \"Blackbox-Exporter/.*\" | unwrap request_time [$__auto]) by (app)",
-          "legendFormat": "p50",
+          "expr": "quantile_over_time(0.5, {job=\"nginx\", app=\"$app\"} | json request_time, user_agent | user_agent !~ \"Blackbox-Exporter/.*\" | unwrap request_time [$__interval]) by (app)",
+          "legendFormat": "p50 (typical)",
           "refId": "A",
           "datasource": {
             "type": "loki",
@@ -273,8 +682,8 @@
           }
         },
         {
-          "expr": "quantile_over_time(0.95, {job=\"nginx\", app=\"$app\"} | json request_time, user_agent | user_agent !~ \"Blackbox-Exporter/.*\" | unwrap request_time [$__auto]) by (app)",
-          "legendFormat": "p95",
+          "expr": "quantile_over_time(0.95, {job=\"nginx\", app=\"$app\"} | json request_time, user_agent | user_agent !~ \"Blackbox-Exporter/.*\" | unwrap request_time [$__interval]) by (app)",
+          "legendFormat": "p95 (slowest 5%)",
           "refId": "B",
           "datasource": {
             "type": "loki",
@@ -284,20 +693,56 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "showPoints": "always",
+            "pointSize": 5
+          }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p50 (typical)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p95 (slowest 5%)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          }
+        ]
       }
     },
     {
       "type": "row",
-      "title": "Containers (cAdvisor)",
+      "title": "Containers",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 15
+        "y": 24
       },
       "panels": []
     },
@@ -312,11 +757,11 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 16
+        "y": 25
       },
       "targets": [
         {
-          "expr": "sum by (container_label_com_dokku_process_type) (rate(container_cpu_usage_seconds_total{container_label_com_dokku_app_name=\"$app\"}[$__rate_interval]))",
+          "expr": "sum by (container_label_com_dokku_process_type) (rate(container_cpu_usage_seconds_total{container_label_com_dokku_app_name=\"$app\", container_label_com_dokku_process_type!=\"\"}[$__rate_interval]))",
           "legendFormat": "{{container_label_com_dokku_process_type}}",
           "refId": "A",
           "datasource": {
@@ -343,11 +788,11 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 16
+        "y": 25
       },
       "targets": [
         {
-          "expr": "sum by (container_label_com_dokku_process_type) (container_memory_working_set_bytes{container_label_com_dokku_app_name=\"$app\"})",
+          "expr": "sum by (container_label_com_dokku_process_type) (container_memory_working_set_bytes{container_label_com_dokku_app_name=\"$app\", container_label_com_dokku_process_type!=\"\"})",
           "legendFormat": "{{container_label_com_dokku_process_type}}",
           "refId": "A",
           "datasource": {
@@ -365,125 +810,181 @@
     },
     {
       "type": "row",
-      "title": "App metrics",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 24
-      },
-      "panels": []
-    },
-    {
-      "type": "stat",
-      "title": "Processes reporting",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 24,
-        "x": 0,
-        "y": 25
-      },
-      "targets": [
-        {
-          "expr": "count by (process_type) (target_info{app=\"$app\"})",
-          "legendFormat": "{{process_type}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        },
-        {
-          "expr": "sum by (process_type) (up{job=\"apps\", app=\"$app\"})",
-          "legendFormat": "{{process_type}} (scraped)",
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ]
-    },
-    {
-      "type": "timeseries",
-      "title": "Requests per second by route and status",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 29
-      },
-      "interval": "1m",
-      "targets": [
-        {
-          "expr": "sum by (http_route, http_response_status_code) (rate(http_server_request_duration_seconds_count{app=\"$app\"}[$__rate_interval]))",
-          "legendFormat": "{{http_route}} {{http_response_status_code}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "reqps"
-        },
-        "overrides": []
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "p95 latency by route",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 29
-      },
-      "interval": "1m",
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{app=\"$app\"}[$__rate_interval])))",
-          "legendFormat": "{{http_route}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        },
-        "overrides": []
-      }
-    },
-    {
-      "type": "row",
       "title": "Logs",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 37
+        "y": 33
       },
       "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Log lines per $__interval by level",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "maxDataPoints": 168,
+      "interval": "1m",
+      "targets": [
+        {
+          "expr": "sum by (detected_level) (count_over_time({job=\"docker\", app=\"$app\"} [$__interval]))",
+          "legendFormat": "{{detected_level}}",
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 0,
+            "barAlignment": -1,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "info"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "warn"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "critical"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "fatal"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "debug"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "trace"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unknown"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "type": "logs",
@@ -493,10 +994,10 @@
         "uid": "loki"
       },
       "gridPos": {
-        "h": 12,
+        "h": 14,
         "w": 24,
         "x": 0,
-        "y": 38
+        "y": 40
       },
       "targets": [
         {
@@ -507,7 +1008,14 @@
             "uid": "loki"
           }
         }
-      ]
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "prettifyLogMessage": false
+      }
     }
   ],
   "links": [
