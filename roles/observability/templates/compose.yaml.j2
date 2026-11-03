@@ -25,6 +25,7 @@ services:
     volumes:
       - ./prometheus:/etc/prometheus:ro
       - prometheus-data:/prometheus
+      # whole dir, not the socket file: a file bind keeps the deleted inode after dockerd restarts
       - /var/run:/var/run:ro
     restart: unless-stopped
 
@@ -46,6 +47,7 @@ services:
     volumes:
       - ./alloy:/etc/alloy:ro
       - alloy-data:/var/lib/alloy
+      # whole dir, not the socket file: a file bind keeps the deleted inode after dockerd restarts
       - /var/run:/var/run:ro
       - /var/log:/var/log:ro
       - /run/log/journal:/run/log/journal:ro
