@@ -47,11 +47,12 @@ in `group_vars/all.yml` and the role deploys Grafana as the Dokku app
   | Folder | Dashboard | Shows |
   |---|---|---|
   | Overview | Server (the home page) | CPU, memory, disk and load at a glance, then host graphs and the busiest containers |
-  | Overview | Apps | Per app: health check, certificate, requests and server errors, processes reporting; requests and p95 response time by page, and other requests, from the app's metrics; requests by status and response time from nginx; containers; log lines by level and logs. nginx figures exclude health-check probes |
+  | Overview | Apps | Per app: health check, certificate, requests and server errors, processes reporting; requests and p95 response time by page, and other requests, from the app's metrics; background jobs: failed jobs, queue depth, runs by task and a table of tasks; the app's own section, if it has one; requests by status and response time from nginx; containers; log lines by level and logs. nginx figures exclude health-check probes |
   | Details | Server details (Node Exporter Full) | Every host metric, from grafana.com |
 
   Each has a Dashboards link to the others. The overviews' JSON is in
-  `roles/observability/files/dashboards/Overview/`.
+  `roles/observability/files/dashboards/Overview/`, and each app's own
+  section in `roles/observability/files/dashboards/apps/`.
 - A JSON log line with a `trace_id` field gets a View trace link to Tempo,
   and a trace links to its logs: the `app` matching the trace's
   `service.name`, filtered on the trace ID.
@@ -133,6 +134,35 @@ comes from the standard `http.server.request.duration` histogram, with
 answered before URL routing have no `http.route`; Other requests groups them
 by status into static files, redirects, not found and other. The row is
 hidden for apps that don't push metrics.
+
+The Jobs row comes from three metrics named after the app, each with a
+`status` label, and `task` on the first two:
+
+| Metric | Kind | `status` |
+|---|---|---|
+| `<app>.jobs` | counter, one per finished job | `succeeded`, `failed` or `aborted` |
+| `<app>.job.duration` | histogram, unit `s` | as above |
+| `<app>.queue.depth` | gauge | `todo` or `doing` |
+
+`<app>` is the Dokku app name, as in `OTEL_SERVICE_NAME`, so the row only
+works for app names without hyphens. It's hidden for apps without
+`<app>_jobs_total`. Every worker counts the same queue, so the queue panels
+take the highest worker's count rather than the sum.
+
+### An app's own section
+
+Metrics only one app has go in
+`roles/observability/files/dashboards/apps/<app>.json`, which the role adds
+to the Apps dashboard below the Jobs row. The file holds:
+
+- `templating`: one hidden variable on a metric only that app pushes, such
+  as `label_values(kandili_notices_total{app="$app"}, app)`. It's empty for
+  every other app, so the section stays hidden.
+- `panels`: a row that repeats over that variable, then its panels, with
+  `gridPos.y` counting from 0. The role moves the section and the rows below
+  it into place.
+
+`kandili.json` is an example.
 
 Prometheus writes a zero at each counter's start time, so a process's first
 increment, or a `dokku run` command's only one, counts in `increase()`.
