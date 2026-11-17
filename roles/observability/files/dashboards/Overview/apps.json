@@ -45,6 +45,21 @@
         },
         "definition": "label_values(target_info{app=\"$app\"}, app)",
         "refresh": 2
+      },
+      {
+        "name": "jobs",
+        "type": "query",
+        "hide": 2,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(${app}_jobs_total{app=\"$app\"}, app)",
+          "refId": "jobs"
+        },
+        "definition": "label_values(${app}_jobs_total{app=\"$app\"}, app)",
+        "refresh": 2
       }
     ]
   },
@@ -595,13 +610,678 @@
     },
     {
       "type": "row",
-      "title": "Traffic",
+      "title": "Jobs",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 15
+      },
+      "repeat": "jobs",
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Failed jobs",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 16
+      },
+      "description": "Jobs of any task that failed in the selected time range.",
+      "targets": [
+        {
+          "expr": "sum(increase(${app}_jobs_total{app=\"$app\", status=\"failed\"}[$__range] anchored)) or vector(0)",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Waiting now",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 16
+      },
+      "description": "Jobs waiting for a worker, and jobs running.",
+      "targets": [
+        {
+          "expr": "max(${app}_queue_depth{app=\"$app\", status=\"todo\"})",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "instant": true,
+          "range": false
+        },
+        {
+          "expr": "max(${app}_queue_depth{app=\"$app\", status=\"doing\"})",
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "waiting"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "running"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Queue depth",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "description": "The most jobs waiting and running in each interval. A rising waiting line means the workers are falling behind.",
+      "maxDataPoints": 168,
+      "interval": "2m",
+      "targets": [
+        {
+          "expr": "max by (status) (max_over_time(${app}_queue_depth{app=\"$app\"}[$__interval]))",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "todo"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "waiting"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "doing"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "running"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "status-history",
+      "title": "Runs by task",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "description": "One cell per task per interval: green when the task ran, red when a run failed, empty when it didn't run.",
+      "maxDataPoints": 168,
+      "interval": "1m",
+      "targets": [
+        {
+          "expr": "(sum by (task) (increase(${app}_jobs_total{app=\"$app\", status=\"failed\"}[$__interval] anchored)) > 0) * 0 + 2 or (sum by (task) (increase(${app}_jobs_total{app=\"$app\"}[$__interval] anchored)) > 0) * 0 + 1",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "legendFormat": "{{task}}"
+        }
+      ],
+      "options": {
+        "showValue": "never",
+        "rowHeight": 0.9,
+        "colWidth": 0.9,
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "ran",
+                  "color": "green"
+                },
+                "2": {
+                  "text": "failed",
+                  "color": "red"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "table",
+      "title": "Tasks",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "description": "Tasks that ran in the selected time range, tasks with failures first.",
+      "maxDataPoints": 168,
+      "interval": "1m",
+      "targets": [
+        {
+          "expr": "sum by (task) (increase(${app}_jobs_total{app=\"$app\"}[$__range] anchored))",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "expr": "sum by (task) (increase(${app}_jobs_total{app=\"$app\", status=\"failed\"}[$__range] anchored)) or sum by (task) (increase(${app}_jobs_total{app=\"$app\"}[$__range] anchored)) * 0",
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "expr": "(sum by (task) (increase(${app}_jobs_total{app=\"$app\", status=\"succeeded\"}[$__range] anchored)) or sum by (task) (increase(${app}_jobs_total{app=\"$app\"}[$__range] anchored)) * 0) / sum by (task) (increase(${app}_jobs_total{app=\"$app\"}[$__range] anchored))",
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, task) (increase(${app}_job_duration_seconds_bucket{app=\"$app\"}[$__range] anchored)))",
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "expr": "sum by (task) (increase(${app}_jobs_total{app=\"$app\"}[$__interval] anchored))",
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "legendFormat": "{{task}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "timeSeriesTable",
+          "options": {
+            "E": {
+              "timeField": "Time",
+              "stat": "sum"
+            }
+          }
+        },
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "task",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time 1": true,
+              "Time 2": true,
+              "Time 3": true,
+              "Time 4": true,
+              "Time": true
+            },
+            "indexByName": {
+              "task": 0,
+              "Value #A": 1,
+              "Value #B": 2,
+              "Value #C": 3,
+              "Value #D": 4,
+              "Trend #E": 5
+            },
+            "renameByName": {
+              "task": "Task",
+              "Value #A": "Runs",
+              "Value #B": "Failed",
+              "Value #C": "Succeeded",
+              "Value #D": "p95",
+              "Trend #E": "Runs over time"
+            }
+          }
+        },
+        {
+          "id": "filterByValue",
+          "options": {
+            "type": "include",
+            "match": "any",
+            "filters": [
+              {
+                "fieldName": "Runs",
+                "config": {
+                  "id": "greater",
+                  "options": {
+                    "value": 0
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "binary",
+            "binary": {
+              "left": "Failed",
+              "operator": "*",
+              "right": "1000000"
+            },
+            "alias": "failed first"
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "binary",
+            "binary": {
+              "left": "failed first",
+              "operator": "+",
+              "right": "Runs"
+            },
+            "alias": "order"
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "order",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "failed first": true,
+              "order": true
+            }
+          }
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Runs"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Succeeded"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 0.95
+                    },
+                    {
+                      "color": "green",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p95"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 10
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Runs over time"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "sparkline"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 320
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "row",
+      "title": "Traffic",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 44
       },
       "panels": []
     },
@@ -616,7 +1296,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 16
+        "y": 45
       },
       "maxDataPoints": 168,
       "interval": "1m",
@@ -722,7 +1402,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 16
+        "y": 45
       },
       "maxDataPoints": 28,
       "interval": "1m",
@@ -798,7 +1478,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 53
       },
       "panels": []
     },
@@ -813,7 +1493,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 25
+        "y": 54
       },
       "targets": [
         {
@@ -844,7 +1524,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 25
+        "y": 54
       },
       "targets": [
         {
@@ -872,7 +1552,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 33
+        "y": 62
       },
       "panels": []
     },
@@ -887,7 +1567,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 63
       },
       "maxDataPoints": 168,
       "interval": "1m",
@@ -1053,7 +1733,7 @@
         "h": 14,
         "w": 24,
         "x": 0,
-        "y": 40
+        "y": 69
       },
       "targets": [
         {

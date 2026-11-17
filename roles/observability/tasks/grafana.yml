@@ -47,11 +47,21 @@
     state: absent
   loop: [dokku-apps.json, node-exporter-full.json]
 
-- name: Write the overview dashboards
+- name: Write the server dashboard
   ansible.builtin.copy:
-    src: dashboards/Overview/
-    dest: "{{ observability_dir }}/grafana/dashboards/json/Overview/"
+    src: dashboards/Overview/server.json
+    dest: "{{ observability_dir }}/grafana/dashboards/json/Overview/server.json"
     mode: "0644"
+
+- name: Write the apps dashboard, with each app's section
+  ansible.builtin.copy:
+    content: "{{ observability_grafana_apps | add_sections(observability_grafana_sections) | to_nice_json(indent=2) }}\n"
+    dest: "{{ observability_dir }}/grafana/dashboards/json/Overview/apps.json"
+    mode: "0644"
+  vars:
+    observability_grafana_apps: "{{ lookup('ansible.builtin.file', 'dashboards/Overview/apps.json') | from_json }}"
+    observability_grafana_sections: >-
+      {{ query('ansible.builtin.file', *query('ansible.builtin.fileglob', 'dashboards/apps/*.json') | sort) | map('from_json') | list }}
 
 - name: Download the Node Exporter Full dashboard
   ansible.builtin.get_url:
